@@ -37,6 +37,10 @@ export interface Folder {
   // Supabase integration fields
   userId?: string; // Owner of the folder
   syncedAt?: string; // Last sync timestamp
+  // Sharing functionality
+  shareable?: boolean; // Whether the folder is shared
+  shareId?: string; // Unique share identifier
+  shareCreatedAt?: string; // When sharing was enabled
 }
 
 export interface AppSettings {

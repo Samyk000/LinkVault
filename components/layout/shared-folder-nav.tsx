@@ -7,7 +7,7 @@
  */
 
 import * as React from "react";
-import { MoreVertical, Edit, Trash, ChevronRight, ChevronDown, FolderPlus } from "lucide-react";
+import { MoreVertical, Edit, Trash, ChevronRight, ChevronDown, FolderPlus, Share2 } from "lucide-react";
 import { FOLDER_ICONS } from "@/constants/folder-icons";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,12 +41,17 @@ export function FolderItem({ folder, isSubFolder = false, onFolderClick }: Folde
   const expandedFolders = useStore((state) => state.expandedFolders);
   const toggleFolderExpanded = useStore((state) => state.toggleFolderExpanded);
   
-  const { 
-    handleEditFolder, 
-    handleAddSubFolder, 
-    handleDeleteFolder, 
+  const {
+    handleEditFolder,
+    handleAddSubFolder,
+    handleDeleteFolder,
     getFolderCount,
   } = useFolderActions();
+  
+  // Share modal state
+  const isShareFolderModalOpen = useStore((state) => state.isShareFolderModalOpen);
+  const setShareFolderModalOpen = useStore((state) => state.setShareFolderModalOpen);
+  const setFolderToShare = useStore((state) => state.setFolderToShare);
 
   const IconOption = FOLDER_ICONS.find(icon => icon.name === folder.icon);
   const FolderIcon = IconOption?.icon || FOLDER_ICONS[15].icon;
@@ -139,6 +144,21 @@ export function FolderItem({ folder, isSubFolder = false, onFolderClick }: Folde
               <DropdownMenuItem onSelect={() => handleEditFolder(folder.id)}>
                 <Edit className="mr-2 size-4" />
                 Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-orange-600"
+                onSelect={() => {
+                  // Set the folder to share and open the modal
+                  setFolderToShare({
+                    id: folder.id,
+                    name: folder.name,
+                    linkCount: getFolderCount(folder.id)
+                  });
+                  setShareFolderModalOpen(true);
+                }}
+              >
+                <Share2 className="mr-2 size-4" />
+                Share
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"

@@ -97,6 +97,7 @@ export interface AppStore {
     isFolderDeleteModalOpen: boolean;
     isEmptyTrashModalOpen: boolean;
     isRestoreAllModalOpen: boolean;
+    isShareFolderModalOpen: boolean;
     
     // Selection States
     selectedFolderId: string | null;
@@ -114,6 +115,8 @@ export interface AppStore {
     
     // Folder to Delete State
     folderToDelete: { id: string; name: string; linkCount: number } | null;
+    // Folder to Share State
+    folderToShare: { id: string; name: string; linkCount: number } | null;
     
     // Actions
     setAddLinkModalOpen: (isOpen: boolean) => void;
@@ -125,6 +128,7 @@ export interface AppStore {
     setFolderDeleteModalOpen: (isOpen: boolean) => void;
     setEmptyTrashModalOpen: (isOpen: boolean) => void;
     setRestoreAllModalOpen: (isOpen: boolean) => void;
+    setShareFolderModalOpen: (isOpen: boolean) => void;
     setSelectedFolder: (folderId: string | null) => void;
     setEditingLink: (linkId: string | null) => void;
     setEditingFolder: (folderId: string | null) => void;
@@ -136,6 +140,7 @@ export interface AppStore {
     clearLinkSelection: () => void;
     selectAllLinks: (linkIds: string[]) => void;
     setFolderToDelete: (folder: { id: string; name: string; linkCount: number } | null) => void;
+    setFolderToShare: (folder: { id: string; name: string; linkCount: number } | null) => void;
     resetUIState: () => void;
   };
 }
@@ -227,6 +232,7 @@ export function useAppStore(): AppStore {
       isFolderDeleteModalOpen: uiStore.isFolderDeleteModalOpen,
       isEmptyTrashModalOpen: uiStore.isEmptyTrashModalOpen,
       isRestoreAllModalOpen: uiStore.isRestoreAllModalOpen,
+      isShareFolderModalOpen: uiStore.isShareFolderModalOpen,
       
       // Selection States
       selectedFolderId: uiStore.selectedFolderId,
@@ -244,6 +250,8 @@ export function useAppStore(): AppStore {
       
       // Folder to Delete State
       folderToDelete: uiStore.folderToDelete,
+      // Folder to Share State
+      folderToShare: uiStore.folderToShare,
       
       // Actions
       setAddLinkModalOpen: uiStore.setAddLinkModalOpen,
@@ -255,6 +263,7 @@ export function useAppStore(): AppStore {
       setFolderDeleteModalOpen: uiStore.setFolderDeleteModalOpen,
       setEmptyTrashModalOpen: uiStore.setEmptyTrashModalOpen,
       setRestoreAllModalOpen: uiStore.setRestoreAllModalOpen,
+      setShareFolderModalOpen: uiStore.setShareFolderModalOpen,
       setSelectedFolder: uiStore.setSelectedFolder,
       setEditingLink: uiStore.setEditingLink,
       setEditingFolder: uiStore.setEditingFolder,
@@ -266,6 +275,7 @@ export function useAppStore(): AppStore {
       clearLinkSelection: uiStore.clearLinkSelection,
       selectAllLinks: uiStore.selectAllLinks,
       setFolderToDelete: uiStore.setFolderToDelete,
+      setFolderToShare: uiStore.setFolderToShare,
       resetUIState: uiStore.resetUIState,
     },
   };

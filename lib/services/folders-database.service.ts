@@ -245,6 +245,176 @@ export class FoldersDatabaseService {
   }
 
   /**
+   * Enable sharing for a folder
+   */
+  async enableFolderSharing(folderId: string): Promise<{ shareUrl: string; shareId: string }> {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new AuthenticationError('User not authenticated');
+      }
+
+      // Verify folder exists and belongs to user
+      const { data: folder, error: folderError } = await this.supabase
+        .from('folders')
+        .select('*')
+        .eq('id', folderId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (folderError || !folder) {
+        throw new NotFoundError('Folder', folderId);
+      }
+
+      // Generate share ID
+      const shareId = `share_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const shareUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/share/folder/${shareId}`;
+
+      // Update folder with sharing info
+      const { error: updateError } = await this.supabase
+        .from('folders')
+        .update({
+          shareable: true,
+          share_id: shareId,
+          share_created_at: new Date().toISOString()
+        })
+        .eq('id', folderId)
+        .eq('user_id', user.id);
+
+      if (updateError) {
+        throw new DatabaseError('Failed to enable folder sharing', { folderId }, updateError as Error);
+      }
+
+      // Create share record
+      const { error: shareError } = await this.supabase
+        .from('folder_shares')
+        .insert({
+          folder_id: folderId,
+          share_id: shareId,
+          created_by: user.id
+        });
+
+      if (shareError) {
+        throw new DatabaseError('Failed to create share record', { folderId }, shareError as Error);
+      }
+
+      this.invalidateUserCache(user.id);
+      
+      return { shareUrl, shareId };
+    } catch (error) {
+      if (error instanceof DatabaseError || error instanceof AuthenticationError || error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new DatabaseError('Failed to enable folder sharing', { folderId }, error as Error);
+    }
+  }
+
+  /**
+   * Disable sharing for a folder
+   */
+  async disableFolderSharing(folderId: string): Promise<void> {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new AuthenticationError('User not authenticated');
+      }
+
+      // Verify folder exists and belongs to user
+      const { data: folder, error: folderError } = await this.supabase
+        .from('folders')
+        .select('*')
+        .eq('id', folderId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (folderError || !folder) {
+        throw new NotFoundError('Folder', folderId);
+      }
+
+      if (!folder.share_id) {
+        throw new DatabaseError('Folder is not currently shared', { folderId });
+      }
+
+      // Disable sharing
+      const { error: updateError } = await this.supabase
+        .from('folders')
+        .update({
+          shareable: false,
+          share_id: null,
+          share_created_at: null
+        })
+        .eq('id', folderId)
+        .eq('user_id', user.id);
+
+      if (updateError) {
+        throw new DatabaseError('Failed to disable sharing', { folderId }, updateError as Error);
+      }
+
+      // Delete share record and analytics
+      await this.supabase
+        .from('share_analytics')
+        .delete()
+        .eq('share_id', folder.share_id);
+
+      await this.supabase
+        .from('folder_shares')
+        .delete()
+        .eq('share_id', folder.share_id);
+
+      this.invalidateUserCache(user.id);
+    } catch (error) {
+      if (error instanceof DatabaseError || error instanceof AuthenticationError || error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new DatabaseError('Failed to disable folder sharing', { folderId }, error as Error);
+    }
+  }
+
+  /**
+   * Get shared folder data
+   */
+  async getSharedFolder(shareId: string): Promise<any | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('folders')
+        .select(`
+          id,
+          name,
+          description,
+          color,
+          icon,
+          shareable,
+          share_id,
+          share_created_at,
+          links (
+            id,
+            title,
+            description,
+            url,
+            thumbnail,
+            favicon_url,
+            platform,
+            is_favorite,
+            tags,
+            created_at
+          )
+        `)
+        .eq('share_id', shareId)
+        .eq('shareable', true)
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      logger.error('Error fetching shared folder:', error);
+      return null;
+    }
+  }
+
+  /**
    * Transform folder from database schema to app schema
    */
   private transformFolderFromDB(dbFolder: DatabaseFolder): Folder {

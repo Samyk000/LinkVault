@@ -709,7 +709,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       }
       subscription?.unsubscribe();
     };
-  }, [setUser, setError, browserInfo.isAndroid, browserInfo.isIOS, browserInfo.isMobile, browserInfo.isSafari, browserInfo.supportsPersistentStorage, hasReliableStorageAvailable, needsMobileHandling]);
+  }, [setUser, setError, browserInfo.isAndroid, browserInfo.isIOS, browserInfo.isMobile, browserInfo.isSafari, browserInfo.supportsPersistentStorage, hasReliableStorageAvailable, needsMobileHandling, getCachedUser]);
 
   const value: AuthContextType = {
     ...state,

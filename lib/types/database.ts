@@ -41,6 +41,10 @@ export interface DatabaseFolder {
   platform: string | null;
   created_at: string;
   updated_at: string;
+  // Sharing functionality
+  shareable?: boolean;
+  share_id?: string;
+  share_created_at?: string;
 }
 
 /**
@@ -70,6 +74,10 @@ export interface FolderUpdateData {
   parent_id?: string | null;
   is_platform_folder?: boolean;
   platform?: string | null;
+  // Sharing functionality
+  shareable?: boolean;
+  share_id?: string;
+  share_created_at?: string;
 }
 
 /**

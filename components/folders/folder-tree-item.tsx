@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Folder } from "@/types";
 import { FOLDER_ICONS } from "@/constants/folder-icons";
 import { getChildFolders, getSubFolderCount } from "@/utils/folder-utils";
+import { FolderActionsMenu } from "@/components/folders/folder-actions-menu";
 
 interface FolderTreeItemProps {
   /**
@@ -53,6 +54,16 @@ interface FolderTreeItemProps {
    * Toggle expand/collapse state
    */
   onToggleExpand: (folderId: string) => void;
+  
+  /**
+   * Callback when folder edit is requested
+   */
+  onEdit?: (folderId: string) => void;
+  
+  /**
+   * Callback when folder delete is requested
+   */
+  onDelete?: (folderId: string) => void;
 }
 
 /**
@@ -85,6 +96,8 @@ export function FolderTreeItem({
   maxDepth = 5,
   expandedIds,
   onToggleExpand,
+  onEdit,
+  onDelete,
 }: FolderTreeItemProps) {
   // Get immediate children of this folder
   const children = getChildFolders(folder.id, allFolders);
@@ -179,6 +192,21 @@ export function FolderTreeItem({
             </span>
           )}
         </button>
+
+        {/* Actions Menu */}
+        {onEdit && onDelete && (
+          <FolderActionsMenu
+            folder={{
+              id: folder.id,
+              name: folder.name,
+              linkCount: subFolderCount, // This could be enhanced to count actual links
+              shareable: !!folder.shareable,
+              shareId: folder.shareId || undefined,
+            }}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        )}
       </div>
 
       {/* Recursive Children (if expanded) */}

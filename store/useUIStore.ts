@@ -23,6 +23,7 @@ interface UIState {
   isFolderDeleteModalOpen: boolean;
   isEmptyTrashModalOpen: boolean;
   isRestoreAllModalOpen: boolean;
+  isShareFolderModalOpen: boolean;
   
   // Selection States
   selectedFolderId: string | null;
@@ -40,6 +41,8 @@ interface UIState {
   
   // Folder to Delete State
   folderToDelete: { id: string; name: string; linkCount: number } | null;
+  // Folder to Share State
+  folderToShare: { id: string; name: string; linkCount: number } | null;
   
   // Actions - App State
   setHydrated: (isHydrated: boolean) => void;
@@ -55,6 +58,7 @@ interface UIState {
   setFolderDeleteModalOpen: (isOpen: boolean) => void;
   setEmptyTrashModalOpen: (isOpen: boolean) => void;
   setRestoreAllModalOpen: (isOpen: boolean) => void;
+  setShareFolderModalOpen: (isOpen: boolean) => void;
   
   // Actions - Selection Controls
   setSelectedFolder: (folderId: string | null) => void;
@@ -74,6 +78,8 @@ interface UIState {
   
   // Actions - Folder Delete
   setFolderToDelete: (folder: { id: string; name: string; linkCount: number } | null) => void;
+  // Actions - Folder Share
+  setFolderToShare: (folder: { id: string; name: string; linkCount: number } | null) => void;
   
   // Actions - UI State Reset
   resetUIState: () => void;
@@ -94,6 +100,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   isFolderDeleteModalOpen: false,
   isEmptyTrashModalOpen: false,
   isRestoreAllModalOpen: false,
+  isShareFolderModalOpen: false,
   
   // Initial Selection States
   selectedFolderId: null,
@@ -113,6 +120,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   
   // Initial Folder to Delete State
   folderToDelete: null,
+  // Initial Folder to Share State
+  folderToShare: null,
   
   /**
    * Sets the hydration state of the app
@@ -196,6 +205,14 @@ export const useUIStore = create<UIState>((set, get) => ({
    */
   setRestoreAllModalOpen: (isOpen) => {
     set({ isRestoreAllModalOpen: isOpen });
+  },
+  
+  /**
+   * Sets the share folder modal open state
+   * @param {boolean} isOpen - Whether modal should be open
+   */
+  setShareFolderModalOpen: (isOpen) => {
+    set({ isShareFolderModalOpen: isOpen });
   },
   
   /**
@@ -304,6 +321,14 @@ export const useUIStore = create<UIState>((set, get) => ({
   },
   
   /**
+   * Sets the folder to share with its metadata
+   * @param {{ id: string; name: string; linkCount: number } | null} folder - Folder to share
+   */
+  setFolderToShare: (folder) => {
+    set({ folderToShare: folder });
+  },
+  
+  /**
    * Resets all UI state to initial values
    */
   resetUIState: () => {
@@ -318,6 +343,7 @@ export const useUIStore = create<UIState>((set, get) => ({
       isFolderDeleteModalOpen: false,
       isEmptyTrashModalOpen: false,
       isRestoreAllModalOpen: false,
+      isShareFolderModalOpen: false,
       
       // Reset Selection States
       selectedFolderId: null,
@@ -335,6 +361,8 @@ export const useUIStore = create<UIState>((set, get) => ({
       
       // Reset Folder to Delete State
       folderToDelete: null,
+      // Reset Folder to Share State
+      folderToShare: null,
       
       // Reset Data Loading State
       isLoadingData: false, // NEW: Reset data loading state
