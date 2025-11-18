@@ -136,7 +136,7 @@ export function ShareFolderModal({ isOpen, onClose, folder }: ShareFolderModalPr
         handleClose();
       }
     }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-w-full mx-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Share2 className="h-5 w-5 text-orange-500" />
@@ -151,40 +151,46 @@ export function ShareFolderModal({ isOpen, onClose, folder }: ShareFolderModalPr
           {/* Share URL Display */}
           <div className="space-y-2">
             <Label htmlFor="share-url">Share Link</Label>
-            <div className="flex gap-2">
-              <Input
-                id="share-url"
-                value={shareUrl || ''}
-                readOnly
-                className="flex-1 font-mono text-sm"
-                placeholder={isGenerating ? "Generating share link..." : "Click Share to generate link"}
-              />
+            <div className="flex gap-2 flex-col sm:flex-row">
+              <div className="flex-1">
+                <Input
+                  id="share-url"
+                  value={shareUrl || ''}
+                  readOnly
+                  className="font-mono text-sm break-all"
+                  placeholder={isGenerating ? "Generating share link..." : "Click Share to generate link"}
+                />
+              </div>
               {isGenerating && (
-                <div className="flex items-center">
+                <div className="flex items-center justify-center sm:justify-start">
                   <div className="animate-spin rounded-full border-2 border-orange-500 border-t-transparent h-4 w-4" />
                 </div>
               )}
-              <Button
-                onClick={handleCopyUrl}
-                variant="outline"
-                size="icon"
-                disabled={!shareUrl || isGenerating}
-              >
-                {copySuccess ? (
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
+              <div className="sm:min-w-[80px]">
+                <Button
+                  onClick={handleCopyUrl}
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  disabled={!shareUrl || isGenerating}
+                >
+                  {copySuccess ? (
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                  ) : (
+                    <Copy className="h-4 w-4 mr-1" />
+                  )}
+                  Copy
+                </Button>
+              </div>
             </div>
           </div>
 
           {/* Share Actions */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-col sm:flex-row">
             <Button
               variant="outline"
               size="sm"
-              className="text-orange-500 hover:text-orange-600 flex-1"
+              className="text-orange-500 hover:text-orange-600 flex-1 py-2"
               onClick={() => {
                 if (shareUrl) {
                   window.open(shareUrl, '_blank');
@@ -192,13 +198,14 @@ export function ShareFolderModal({ isOpen, onClose, folder }: ShareFolderModalPr
               }}
               disabled={!shareUrl}
             >
-              <Eye className="mr-1 h-3 w-3" />
+              <Eye className="mr-2 h-4 w-4" />
               Preview
             </Button>
             <Button
               onClick={handleClose}
               variant="outline"
-              className="flex-1"
+              size="sm"
+              className="flex-1 py-2"
             >
               Close
             </Button>
