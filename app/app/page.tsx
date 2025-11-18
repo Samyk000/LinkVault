@@ -1,0 +1,474 @@
+/**
+ * @file app/app/page.tsx
+ * @description Main application page for authenticated users
+ * @created 2025-01-01
+ */
+
+"use client";
+
+import React, { useMemo, useState, useEffect, useCallback, useDeferredValue } from "react";
+import { Star, Trash2, Search, RotateCcw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { usePerformanceMonitor } from "@/hooks/use-performance-monitor";
+import { Header } from "@/components/layout/header";
+import { Sidebar } from "@/components/layout/sidebar";
+import { LinkGrid } from "@/components/links/link-grid";
+import { ViewToggle } from "@/components/links/view-toggle";
+import { MobileFAB } from "@/components/common/mobile-fab";
+import { EmptyState } from "@/components/common/empty-state";
+import { BulkActionBar } from "@/components/common/bulk-action-bar";
+import { 
+  LazyAddLinkModal, 
+  LazyCreateFolderModal, 
+  LazyEmptyTrashModal, 
+  LazyRestoreAllModal 
+} from "@/components/lazy";
+import { useStore } from "@/store/useStore";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useSpecificFolderDescendants } from "@/hooks/use-folder-descendants";
+import { useDebounce } from "@/hooks/use-debounce";
+import { SEARCH_DEBOUNCE_DELAY } from "@/constants";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useRouter } from "next/navigation";
+
+/**
+ * Main application page component for authenticated users.
+ * Displays links in grid/list view with search, filtering, and bulk actions.
+ * Supports folder navigation, favorites, and trash views.
+ * @returns {JSX.Element} Application page component
+ */
+export default function AppPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  
+  // Redirect to login if not authenticated (edge case: session expired during use)
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login?expired=true');
+    }
+  }, [user, authLoading, router]);
+
+  // Use selective store selectors with shallow comparison to minimize re-renders
+  const links = useStore((state) => state.links);
+  const folders = useStore((state) => state.folders);
+  const selectedFolderId = useStore((state) => state.selectedFolderId);
+  const currentView = useStore((state) => state.currentView);
+  const searchFilters = useStore((state) => state.searchFilters);
+  const isHydrated = useStore((state) => state.isHydrated);
+  const isLoadingLinks = useStore((state) => state.isLoadingLinks);
+  
+  const setSearchFilters = useStore((state) => state.setSearchFilters);
+  const setAddLinkModalOpen = useStore((state) => state.setAddLinkModalOpen);
+  const emptyTrash = useStore((state) => state.emptyTrash);
+  const restoreAllFromTrash = useStore((state) => state.restoreAllFromTrash);
+  const isAddLinkModalOpen = useStore((state) => state.isAddLinkModalOpen);
+  const isCreateFolderModalOpen = useStore((state) => state.isCreateFolderModalOpen);
+  const { toast } = useToast();
+  
+  // Show loading skeleton while store is hydrating OR while links are loading
+  const isInitialLoading = !isHydrated || isLoadingLinks;
+  const isLoadingData = useStore((state) => state.isLoadingData);
+  
+  // Performance monitoring for main app page - disabled to reduce overhead
+  const { trackMetric, trackInteraction, trackError } = usePerformanceMonitor({
+    componentName: 'AppPage',
+    trackRenders: false, // Disabled to reduce overhead - only track interactions and errors
+    trackInteractions: true,
+    trackErrors: true
+  });
+  
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false);
+  const [showRestoreAllModal, setShowRestoreAllModal] = useState(false);
+  
+  // Debounce search query for better performance
+  const debouncedSearchQuery = useDebounce(searchFilters.query, SEARCH_DEBOUNCE_DELAY);
+
+  // Defer expensive computations to avoid blocking initial render
+  const deferredLinks = useDeferredValue(links);
+  const deferredFolders = useDeferredValue(folders);
+  const deferredSelectedFolderId = useDeferredValue(selectedFolderId);
+  const deferredCurrentView = useDeferredValue(currentView);
+  const deferredSearchQuery = useDeferredValue(debouncedSearchQuery);
+
+  // Get all descendant folder IDs for the selected folder (includes parent + all sub-folders)
+  // Only compute when not loading to avoid blocking
+  const descendantFolderIds = useSpecificFolderDescendants(
+    isLoadingLinks ? null : deferredSelectedFolderId, 
+    deferredFolders
+  );
+
+  // Filter links based on view, folder, and search query
+  // Use deferred values to prevent blocking initial render
+  const filteredLinks = useMemo(() => {
+    // Early return if still loading to prevent expensive computation
+    if (isLoadingLinks) {
+      return [];
+    }
+
+    let filtered = deferredLinks;
+
+    // Filter by view
+    if (deferredCurrentView === 'trash') {
+      // Show only deleted links in trash
+      filtered = filtered.filter((link) => link.deletedAt !== null);
+    } else {
+      // Exclude deleted links from all other views
+      filtered = filtered.filter((link) => link.deletedAt === null);
+
+      if (deferredCurrentView === 'favorites') {
+        filtered = filtered.filter((link) => link.isFavorite);
+      } else {
+        // Filter by folder in 'all' view - includes all sub-folders recursively
+        if (deferredSelectedFolderId && descendantFolderIds.length > 0) {
+          filtered = filtered.filter((link) =>
+            link.folderId && descendantFolderIds.includes(link.folderId)
+          );
+        }
+      }
+    }
+
+    // Filter by debounced search query
+    if (deferredSearchQuery) {
+      const query = deferredSearchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (link) =>
+          link.title.toLowerCase().includes(query) ||
+          link.description.toLowerCase().includes(query) ||
+          link.url.toLowerCase().includes(query) ||
+          (link.tags && link.tags.some(tag => tag.toLowerCase().includes(query)))
+      );
+    }
+
+    // Sort by date (newest first) - create new array to avoid mutating
+    return [...filtered].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [deferredLinks, deferredSelectedFolderId, deferredCurrentView, deferredSearchQuery, descendantFolderIds, isLoadingLinks]);
+
+  // Memoize callbacks to prevent unnecessary re-renders
+  const handleToggleSelect = useCallback((linkId: string) => {
+    setSelectedIds(prev =>
+      prev.includes(linkId)
+        ? prev.filter(id => id !== linkId)
+        : [...prev, linkId]
+    );
+  }, []);
+
+  const handleClearSelection = useCallback(() => {
+    trackInteraction('click', 'clear_selection', {
+      selectedCount: selectedIds.length.toString()
+    });
+    setSelectedIds([]);
+  }, [selectedIds.length, trackInteraction]);
+
+  // Memoize select all handler
+  const handleSelectAllEvent = useCallback(() => {
+    const startTime = performance.now();
+    
+    try {
+      const visibleLinkIds = filteredLinks.map(link => link.id);
+      setSelectedIds(prev => {
+        const allSelected = visibleLinkIds.every(id => prev.includes(id));
+        if (allSelected) {
+          return prev.filter(id => !visibleLinkIds.includes(id));
+        } else {
+          const newSelection = [...prev];
+          visibleLinkIds.forEach(id => {
+            if (!newSelection.includes(id)) {
+              newSelection.push(id);
+            }
+          });
+          return newSelection;
+        }
+      });
+      
+      const duration = performance.now() - startTime;
+      trackMetric('select_all_time', duration, {
+        visibleLinksCount: visibleLinkIds.length.toString(),
+        currentView
+      });
+      
+      trackInteraction('click', 'select_all_toggle', {
+        visibleLinksCount: visibleLinkIds.length.toString(),
+        currentView,
+        duration: duration.toString()
+      });
+    } catch (error) {
+      trackError('Select all toggle error', {
+        action: 'select_all_toggle',
+        visibleLinksCount: filteredLinks.length
+      });
+    }
+  }, [filteredLinks, currentView, trackMetric, trackInteraction, trackError]);
+
+  // Listen for select all event from bulk action bar
+  useEffect(() => {
+    window.addEventListener('selectAllVisible', handleSelectAllEvent);
+    return () => window.removeEventListener('selectAllVisible', handleSelectAllEvent);
+  }, [handleSelectAllEvent]);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const startTime = performance.now();
+    const query = e.target.value;
+    
+    try {
+      // Update search filters immediately for responsive UI
+      setSearchFilters({ query });
+      
+      // Show loading state while debouncing
+      setIsSearching(!!query);
+      
+      const duration = performance.now() - startTime;
+      trackMetric('search_input_time', duration, {
+        queryLength: query.length.toString(),
+        hasQuery: (!!query).toString()
+      });
+      
+      trackInteraction('input', 'search_query', {
+        queryLength: query.length.toString(),
+        hasQuery: (!!query).toString(),
+        duration: duration.toString()
+      });
+    } catch (error) {
+      trackError('Search input error', {
+        action: 'search_input',
+        queryLength: query.length
+      });
+    }
+  }, [setSearchFilters, trackMetric, trackInteraction, trackError]);
+  
+  // Update loading state when debounced query changes
+  useEffect(() => {
+    setIsSearching(false);
+  }, [debouncedSearchQuery]);
+
+  // Memoize modal handlers
+  const handleEmptyTrash = useCallback(() => {
+    emptyTrash();
+    toast({
+      title: "Trash emptied",
+      description: `(${filteredLinks.length})`,
+      variant: "success",
+    });
+  }, [emptyTrash, toast, filteredLinks.length]);
+
+  const handleRestoreAll = useCallback(() => {
+    const count = filteredLinks.length;
+    restoreAllFromTrash();
+    toast({
+      title: "All items restored",
+      description: `(${count})`,
+      variant: "success",
+      icon: <RotateCcw className="size-4" />,
+    });
+  }, [restoreAllFromTrash, toast, filteredLinks.length]);
+
+  // Memoize page title and title class name - use deferred values for performance
+  const pageTitle = useMemo(() => {
+    if (isLoadingLinks) return 'Loading...';
+    if (deferredCurrentView === 'favorites') return 'Favorites';
+    if (deferredCurrentView === 'trash') return 'Trash';
+    if (deferredSelectedFolderId) {
+      const folder = deferredFolders.find(f => f.id === deferredSelectedFolderId);
+      return folder?.name || 'All Links';
+    }
+    return 'All Links';
+  }, [deferredCurrentView, deferredSelectedFolderId, deferredFolders, isLoadingLinks]);
+
+  const titleClassName = useMemo(() => {
+    const length = pageTitle.length;
+    if (length > 30) return 'text-sm sm:text-base md:text-base lg:text-lg';
+    if (length > 20) return 'text-base sm:text-lg md:text-lg lg:text-xl';
+    if (length > 12) return 'text-lg sm:text-xl md:text-xl lg:text-2xl';
+    return 'text-xl sm:text-2xl md:text-2xl lg:text-3xl';
+  }, [pageTitle]);
+
+  // Clear selection when switching views
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [currentView]);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts([
+    {
+      key: 'k',
+      ctrlKey: true,
+      callback: () => setAddLinkModalOpen(true),
+    },
+  ]);
+
+  // Remove the isInitialLoading condition completely
+  // All UI elements should be persistent and always visible
+
+  return (
+    <div className="flex h-screen flex-col">
+      <Header />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <div className="mb-8 sm:mb-10">
+              {/* Mobile: Search first, then title below */}
+              {/* Desktop: Title left, search right */}
+              <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-center md:justify-between md:gap-6">
+                {/* Title + Count - Below search on mobile, left on desktop */}
+                <div className="flex items-baseline gap-3 sm:gap-4 min-w-0 md:order-1 md:flex-1">
+                  <h1 className={`${titleClassName} font-bold tracking-tight truncate text-foreground`}>
+                    {isLoadingData ? 'Loading...' : pageTitle}
+                  </h1>
+                  <span className="text-sm sm:text-base text-muted-foreground flex-shrink-0 font-medium tabular-nums">
+                    {isLoadingData ? '...' : `(${filteredLinks.length})`}
+                  </span>
+                </div>
+                
+                {/* Search Bar + View Toggle - First on mobile, right on desktop */}
+                <div className="flex items-center gap-3 sm:gap-4 md:order-2">
+                  <div className="flex-1 md:w-[280px] lg:w-[340px] xl:w-[400px]">
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                      <Input
+                        type="search"
+                        placeholder="Search links..."
+                        value={searchFilters.query}
+                        onChange={handleSearchChange}
+                        className="pl-10 pr-4 h-11 text-base border-2 focus:border-primary/50 transition-all duration-200 shadow-sm hover:shadow-md focus:shadow-md"
+                      />
+                    </div>
+                  </div>
+                  <ViewToggle />
+                </div>
+              </div>
+              
+              {/* Trash Actions Row - Only in trash view, below view toggle */}
+              {deferredCurrentView === 'trash' && !isLoadingData && filteredLinks.length > 0 && (
+                <div className="flex justify-end mt-4 sm:mt-5">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowRestoreAllModal(true)}
+                      className="h-11 w-11 text-green-600 hover:text-green-700 hover:bg-green-600/10 dark:text-green-500 dark:hover:text-green-400 dark:hover:bg-green-500/10 transition-all duration-200 rounded-lg"
+                      title="Restore all"
+                      aria-label="Restore all items"
+                    >
+                      <RotateCcw className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowEmptyTrashModal(true)}
+                      className="h-11 w-11 text-destructive hover:text-destructive/90 hover:bg-destructive/10 transition-all duration-200 rounded-lg"
+                      title="Empty trash"
+                      aria-label="Empty trash permanently"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Show skeleton loading ONLY for the content area, not the persistent UI */}
+            {isLoadingData || (filteredLinks.length === 0 && folders.length === 0 && deferredLinks.length === 0) ? (
+              // Show skeleton loading when:
+              // 1. Data is actively loading (isLoadingData)
+              // 2. OR no data has loaded yet (no links, no folders, no deferred links)
+              // This ensures skeleton loading shows until actual user data is available
+              <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="rounded-lg border bg-card overflow-hidden">
+                    <div className="h-28 sm:h-32 w-full animate-pulse bg-muted" />
+                    <div className="p-3 sm:p-4 space-y-2">
+                      <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
+                      <div className="h-2.5 w-full animate-pulse rounded bg-muted" />
+                      <div className="h-2.5 w-2/3 animate-pulse rounded bg-muted" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : deferredCurrentView === 'favorites' && filteredLinks.length === 0 && deferredLinks.length > 0 ? (
+              <EmptyState
+                icon={Star}
+                title="No favorites yet"
+                description="Click the star icon on any link card to mark it as a favorite and see it here."
+              />
+            ) : deferredCurrentView === 'trash' && filteredLinks.length === 0 ? (
+              <EmptyState
+                icon={Trash2}
+                title="Trash is empty"
+                description="Deleted links will appear here. You'll be able to restore them or delete them permanently."
+              />
+            ) : filteredLinks.length === 0 ? (
+              <EmptyState
+                icon={deferredCurrentView === 'favorites' ? Star : Trash2}
+                title={deferredCurrentView === 'favorites' ? "No favorites yet" : "No links found"}
+                description={
+                  deferredCurrentView === 'favorites'
+                    ? "Click the star icon on any link card to mark it as a favorite and see it here."
+                    : "Your links will appear here. Add your first link to get started."
+                }
+              />
+            ) : (
+              <LinkGrid
+                links={filteredLinks}
+                isInTrash={deferredCurrentView === 'trash'}
+                isLoading={isSearching || isLoadingLinks}
+                selectedIds={selectedIds}
+                onToggleSelect={handleToggleSelect}
+                isSelectionModeActive={selectedIds.length > 0}
+              />
+            )}
+          </div>
+        </main>
+      </div>
+
+      {/* Lazy-loaded modals - only render when needed */}
+      {isAddLinkModalOpen && (
+        <React.Suspense fallback={null}>
+          <LazyAddLinkModal />
+        </React.Suspense>
+      )}
+
+      {isCreateFolderModalOpen && (
+        <React.Suspense fallback={null}>
+          <LazyCreateFolderModal />
+        </React.Suspense>
+      )}
+
+      {showEmptyTrashModal && (
+        <React.Suspense fallback={null}>
+          <LazyEmptyTrashModal
+            isOpen={showEmptyTrashModal}
+            onClose={() => setShowEmptyTrashModal(false)}
+            onConfirm={handleEmptyTrash}
+            trashCount={filteredLinks.length}
+          />
+        </React.Suspense>
+      )}
+
+      {showRestoreAllModal && (
+        <React.Suspense fallback={null}>
+          <LazyRestoreAllModal
+            isOpen={showRestoreAllModal}
+            onClose={() => setShowRestoreAllModal(false)}
+            onConfirm={handleRestoreAll}
+            trashCount={filteredLinks.length}
+          />
+        </React.Suspense>
+      )}
+
+      <MobileFAB />
+
+      {/* Bulk Action Bar */}
+      <BulkActionBar
+        selectedIds={selectedIds}
+        onClearSelection={handleClearSelection}
+        totalVisibleItems={filteredLinks.length}
+      />
+    </div>
+  );
+}
