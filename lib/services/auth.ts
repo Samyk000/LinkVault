@@ -5,13 +5,13 @@
  */
 
 import { createClient } from '@/lib/supabase/client';
-import { 
-  AuthUser, 
-  SignUpData, 
-  SignInData, 
-  AuthError, 
+import {
+  AuthUser,
+  SignUpData,
+  SignInData,
+  AuthError,
   UserProfile,
-  UserSettings 
+  UserSettings
 } from '@/lib/types/auth';
 import { AuthError as SupabaseAuthError } from '@supabase/supabase-js';
 import { logger } from '@/lib/utils/logger';
@@ -129,7 +129,7 @@ export class AuthService {
    */
   private handleBroadcastMessage(event: MessageEvent): void {
     const { type, payload } = event.data;
-    
+
     switch (type) {
       case 'AUTH_STATE_CHANGED':
         // Sync auth state across tabs without triggering infinite loops
@@ -167,7 +167,7 @@ export class AuthService {
     this.sessionCheckInterval = setInterval(async () => {
       try {
         const { data: { session }, error } = await this.supabase.auth.getSession();
-        
+
         if (error) {
           logger.error('Session check error:', error);
           return;
@@ -195,7 +195,7 @@ export class AuthService {
   private async refreshSession(): Promise<void> {
     try {
       const { data, error } = await this.supabase.auth.refreshSession();
-      
+
       if (error) {
         logger.error('Session refresh error:', error);
         this.handleSessionExpiration();
@@ -245,7 +245,7 @@ export class AuthService {
       );
 
       logger.warn(`Operation failed, retrying in ${delay}ms (attempt ${attempt + 1}/${this.retryConfig.maxRetries})`);
-      
+
       await new Promise(resolve => setTimeout(resolve, delay));
       return this.retryWithBackoff(operation, attempt + 1);
     }
@@ -385,112 +385,112 @@ export class AuthService {
     * CRITICAL: Instant logout with immediate session clearing and race condition fixes
     * @returns {Promise<{error: AuthError | null}>}
     */
-   async signOut(): Promise<{ error: AuthError | null }> {
-     // Prevent concurrent sign-out operations
-     if (this.isSigningOut) {
-       logger.warn('Sign out already in progress');
-       return { error: null };
-     }
+  async signOut(): Promise<{ error: AuthError | null }> {
+    // Prevent concurrent sign-out operations
+    if (this.isSigningOut) {
+      logger.warn('Sign out already in progress');
+      return { error: null };
+    }
 
-     this.isSigningOut = true;
+    this.isSigningOut = true;
 
-     try {
-       // CRITICAL: Clear session monitoring immediately (synchronous)
-       if (this.sessionCheckInterval) {
-         clearInterval(this.sessionCheckInterval);
-         this.sessionCheckInterval = null;
-       }
+    try {
+      // CRITICAL: Clear session monitoring immediately (synchronous)
+      if (this.sessionCheckInterval) {
+        clearInterval(this.sessionCheckInterval);
+        this.sessionCheckInterval = null;
+      }
 
-       // CRITICAL: Broadcast logout immediately (synchronous)
-       this.broadcastAuthChange('LOGOUT', { timestamp: Date.now() });
+      // CRITICAL: Broadcast logout immediately (synchronous)
+      this.broadcastAuthChange('LOGOUT', { timestamp: Date.now() });
 
-       // CRITICAL: Clear Supabase session cookies immediately
-       // This prevents StoreInitializer from detecting a session
-       try {
-         // Clear all Supabase auth cookies with comprehensive cleanup
-         if (typeof document !== 'undefined') {
-           const cookies = document.cookie.split(';');
-           cookies.forEach(cookie => {
-             const eqPos = cookie.indexOf('=');
-             const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-             // Clear Supabase auth cookies - expanded pattern matching
-             if (name.startsWith('sb-') ||
-                 name.includes('supabase') ||
-                 name.includes('auth-token') ||
-                 name.includes('session')) {
-               // Clear with multiple domain variations for cross-domain support
-               const domains = [
-                 window.location.hostname,
-                 `.${window.location.hostname}`,
-                 ''
-               ];
-               domains.forEach(domain => {
-                 document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;${domain ? `domain=${domain};` : ''}secure;samesite=lax`;
-                 document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;${domain ? `domain=${domain};` : ''}secure;samesite=strict`;
-               });
-             }
-           });
+      // CRITICAL: Clear Supabase session cookies immediately
+      // This prevents StoreInitializer from detecting a session
+      try {
+        // Clear all Supabase auth cookies with comprehensive cleanup
+        if (typeof document !== 'undefined') {
+          const cookies = document.cookie.split(';');
+          cookies.forEach(cookie => {
+            const eqPos = cookie.indexOf('=');
+            const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+            // Clear Supabase auth cookies - expanded pattern matching
+            if (name.startsWith('sb-') ||
+              name.includes('supabase') ||
+              name.includes('auth-token') ||
+              name.includes('session')) {
+              // Clear with multiple domain variations for cross-domain support
+              const domains = [
+                window.location.hostname,
+                `.${window.location.hostname}`,
+                ''
+              ];
+              domains.forEach(domain => {
+                document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;${domain ? `domain=${domain};` : ''}secure;samesite=lax`;
+                document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;${domain ? `domain=${domain};` : ''}secure;samesite=strict`;
+              });
+            }
+          });
 
-           // Clear localStorage and sessionStorage
-           try {
-             localStorage.removeItem('supabase.auth.token');
-             sessionStorage.removeItem('supabase.auth.token');
-             // Clear any other auth-related storage
-             Object.keys(localStorage).forEach(key => {
-               if (key.includes('supabase') || key.includes('auth')) {
-                 localStorage.removeItem(key);
-               }
-             });
-             Object.keys(sessionStorage).forEach(key => {
-               if (key.includes('supabase') || key.includes('auth')) {
-                 sessionStorage.removeItem(key);
-               }
-             });
-           } catch (storageError) {
-             logger.warn('Error clearing storage:', storageError);
-           }
-         }
-       } catch (cookieError) {
-         logger.warn('Error clearing cookies:', cookieError);
-       }
+          // Clear localStorage and sessionStorage
+          try {
+            localStorage.removeItem('supabase.auth.token');
+            sessionStorage.removeItem('supabase.auth.token');
+            // Clear any other auth-related storage
+            Object.keys(localStorage).forEach(key => {
+              if (key.includes('supabase') || key.includes('auth')) {
+                localStorage.removeItem(key);
+              }
+            });
+            Object.keys(sessionStorage).forEach(key => {
+              if (key.includes('supabase') || key.includes('auth')) {
+                sessionStorage.removeItem(key);
+              }
+            });
+          } catch (storageError) {
+            logger.warn('Error clearing storage:', storageError);
+          }
+        }
+      } catch (cookieError) {
+        logger.warn('Error clearing cookies:', cookieError);
+      }
 
-       // Sign out from Supabase with timeout protection
-       // Use Promise.race to prevent hanging
-       const signOutPromise = this.supabase.auth.signOut();
-       const timeoutPromise = new Promise<never>((_, reject) =>
-         setTimeout(() => reject(new Error('SignOut timeout')), 5000)
-       );
+      // Sign out from Supabase with timeout protection
+      // Use Promise.race to prevent hanging
+      const signOutPromise = this.supabase.auth.signOut();
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('SignOut timeout')), 5000)
+      );
 
-       try {
-         await Promise.race([signOutPromise, timeoutPromise]);
-         logger.debug('Supabase signOut completed successfully');
-       } catch (signOutError) {
-         logger.warn('Supabase signOut timed out or failed (non-blocking):', signOutError);
-         // Continue with logout even if Supabase signOut fails
-       }
+      try {
+        await Promise.race([signOutPromise, timeoutPromise]);
+        logger.debug('Supabase signOut completed successfully');
+      } catch (signOutError) {
+        logger.warn('Supabase signOut timed out or failed (non-blocking):', signOutError);
+        // Continue with logout even if Supabase signOut fails
+      }
 
-       // CRITICAL: Force redirect immediately after cleanup
-       // Use replace instead of href to prevent back button issues
-       if (typeof window !== 'undefined') {
-         window.location.replace('/login?logout=success');
-       }
+      // CRITICAL: Force redirect immediately after cleanup
+      // Use replace instead of href to prevent back button issues
+      if (typeof window !== 'undefined') {
+        window.location.replace('/login');
+      }
 
-       logger.debug('Logout initiated successfully');
-       return { error: null };
-     } catch (error) {
-       logger.error('Error during signOut:', error);
-       // Even on error, attempt redirect
-       if (typeof window !== 'undefined') {
-         window.location.replace('/login?logout=error');
-       }
-       return { error: null };
-     } finally {
-       // Reset flag after a short delay to allow redirect
-       setTimeout(() => {
-         this.isSigningOut = false;
-       }, 1000);
-     }
-   }
+      logger.debug('Logout initiated successfully');
+      return { error: null };
+    } catch (error) {
+      logger.error('Error during signOut:', error);
+      // Even on error, attempt redirect
+      if (typeof window !== 'undefined') {
+        window.location.replace('/login?logout=error');
+      }
+      return { error: null };
+    } finally {
+      // Reset flag after a short delay to allow redirect
+      setTimeout(() => {
+        this.isSigningOut = false;
+      }, 1000);
+    }
+  }
 
   /**
    * Get the current authenticated user with mobile-specific handling
@@ -619,7 +619,7 @@ export class AuthService {
       // Pass event and session directly to callback
       // The auth context will handle user fetching
       callback(event, session);
-      
+
       // Also broadcast auth state changes
       if (session?.user) {
         // OPTIMIZED: Fetch profile and settings in parallel
@@ -627,13 +627,13 @@ export class AuthService {
           this.getUserProfile(session.user.id),
           this.getUserSettings(session.user.id)
         ]);
-        
+
         const user: AuthUser = {
           ...session.user,
           profile: profile || undefined,
           settings: settings || undefined,
         };
-        
+
         this.broadcastAuthChange('AUTH_STATE_CHANGED', { user });
       } else {
         this.broadcastAuthChange('AUTH_STATE_CHANGED', { user: null });

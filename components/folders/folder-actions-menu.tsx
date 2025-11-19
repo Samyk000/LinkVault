@@ -35,12 +35,9 @@ export function FolderActionsMenu({ folder, onEdit, onDelete }: FolderActionsMen
             <Edit className="h-4 w-4 mr-2" />
             Edit Folder
           </DropdownMenuItem>
-          
+
           <DropdownMenuItem
-            onSelect={() => {
-              console.log('FolderActionsMenu: Share button clicked, opening modal');
-              setShowShareModal(true);
-            }}
+            onSelect={() => setShowShareModal(true)}
             className="text-orange-600 focus:bg-orange-50 focus:text-orange-600"
           >
             <Share2 className="h-4 w-4 mr-2" />
@@ -49,8 +46,8 @@ export function FolderActionsMenu({ folder, onEdit, onDelete }: FolderActionsMen
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem 
-            className="text-red-600 focus:bg-red-50 focus:text-red-600" 
+          <DropdownMenuItem
+            className="text-red-600 focus:bg-red-50 focus:text-red-600"
             onSelect={() => onDelete(folder.id)}
           >
             <Trash2 className="h-4 w-4 mr-2" />

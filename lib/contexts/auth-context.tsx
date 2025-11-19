@@ -28,6 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: React.ReactNode;
+  initialUser?: AuthUser | null;
 }
 
 /**
@@ -35,21 +36,21 @@ interface AuthProviderProps {
  * @param {AuthProviderProps} props - Component props
  * @returns {JSX.Element} Provider component
  */
-export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element {
-   const [state, setState] = useState<AuthState>({
-     user: null,
-     loading: true,
-     error: null,
-   });
+export function AuthProvider({ children, initialUser }: AuthProviderProps): React.JSX.Element {
+  const [state, setState] = useState<AuthState>({
+    user: initialUser || null,
+    loading: !initialUser,
+    error: null,
+  });
 
-   // Detect mobile browser capabilities for adaptive behavior
-   const browserInfo = detectMobileBrowser();
-   const needsMobileHandling = needsMobileSessionHandling();
-   const hasReliableStorageAvailable = hasReliableStorage();
-   
-   // Cache for user data to improve performance
-   const userCache = useRef<Map<string, { user: AuthUser | null; timestamp: number }>>(new Map());
-   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+  // Detect mobile browser capabilities for adaptive behavior
+  const browserInfo = detectMobileBrowser();
+  const needsMobileHandling = needsMobileSessionHandling();
+  const hasReliableStorageAvailable = hasReliableStorage();
+
+  // Cache for user data to improve performance
+  const userCache = useRef<Map<string, { user: AuthUser | null; timestamp: number }>>(new Map());
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
   /**
    * Clear any authentication errors
@@ -88,7 +89,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   const getCachedUser = useCallback(async (forceRefresh = false): Promise<AuthUser | null> => {
     const cacheKey = 'current_user';
     const now = Date.now();
-    
+
     // Check cache first (unless force refresh)
     if (!forceRefresh) {
       const cached = userCache.current.get(cacheKey);
@@ -102,7 +103,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         return cached.user;
       }
     }
-    
+
     // Cache miss or expired, fetch fresh data
     try {
       debugLogger.auth({
@@ -110,15 +111,15 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         success: true,
         metadata: { forceRefresh, cacheExpired: !!userCache.current.get(cacheKey) }
       });
-      
+
       const user = await authService.getCurrentUser();
-      
+
       // Cache the fresh data
       userCache.current.set(cacheKey, {
         user,
         timestamp: now
       });
-      
+
       logger.debug('User data fetched and cached');
       return user;
     } catch (error) {
@@ -157,15 +158,15 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     try {
       setLoading(true);
       clearError();
-      
+
       const { user, error } = await authService.signUp(data);
-      
+
       if (error) {
         setError(error);
         setLoading(false);
         return { error };
       }
-      
+
       setUser(user);
       setLoading(false);
       return { error: null };
@@ -188,15 +189,15 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     try {
       setLoading(true);
       clearError();
-      
+
       const { user, error } = await authService.signIn(data);
-      
+
       if (error) {
         setError(error);
         setLoading(false);
         return { error };
       }
-      
+
       setUser(user);
       setLoading(false);
       return { error: null };
@@ -218,16 +219,19 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     try {
       setLoading(true);
       clearError();
-      
+
+      // Clear user cache to prevent stale data
+      userCache.current.clear();
+
       // Sign out from Supabase
       const { error } = await authService.signOut();
-      
+
       if (error) {
         setError(error);
         setLoading(false);
         return { error };
       }
-      
+
       setUser(null);
       setLoading(false);
       return { error: null };
@@ -298,6 +302,27 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     // Enhanced mobile-aware session recovery with storage fallback
     const recoverSession = async (): Promise<AuthUser | null> => {
       try {
+        // CRITICAL: Skip session recovery on login page - no session expected
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/login')) {
+          logger.debug('Skipping session recovery on login page');
+          return null;
+        }
+
+        // CRITICAL: Skip session recovery if user recently logged out
+        if (typeof window !== 'undefined') {
+          const logoutMarker = localStorage.getItem('user_logged_out') || sessionStorage.getItem('user_logged_out');
+          if (logoutMarker) {
+            const logoutTime = parseInt(logoutMarker);
+            const now = Date.now();
+            const fiveMinutes = 5 * 60 * 1000;
+
+            if (now - logoutTime < fiveMinutes) {
+              logger.debug('Skipping session recovery - user recently logged out');
+              return null;
+            }
+          }
+        }
+
         // CRITICAL: For mobile browsers, try multiple recovery strategies
         if (needsMobileHandling || !hasReliableStorageAvailable) {
           logger.debug('Mobile browser detected, attempting multi-strategy session recovery');
@@ -306,13 +331,13 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           try {
             const maxRetries = 3;
             let lastError: any = null;
-            
+
             for (let i = 0; i < maxRetries; i++) {
               try {
                 authDebug.logRecovery('supabase_direct', false, undefined, i);
-                
+
                 const { data: { session }, error } = await authService.getSupabaseClient().auth.getSession();
-                
+
                 if (!error && session?.user) {
                   logger.debug(`Session recovered via Supabase client (attempt ${i + 1})`);
                   authDebug.logRecovery('supabase_direct', true, undefined, i);
@@ -322,9 +347,9 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
                     return user;
                   }
                 }
-                
+
                 if (error) lastError = error;
-                
+
                 // Wait before retry (exponential backoff)
                 if (i < maxRetries - 1) {
                   await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, i)));
@@ -333,13 +358,13 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
                 lastError = supabaseError;
                 logger.warn(`Supabase session recovery attempt ${i + 1} failed:`, supabaseError);
                 authDebug.logRecovery('supabase_direct', false, (supabaseError as Error).message || 'Unknown error', i);
-                
+
                 if (i < maxRetries - 1) {
                   await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, i)));
                 }
               }
             }
-            
+
             logger.warn('All Supabase session recovery attempts failed:', lastError);
           } catch (supabaseError) {
             logger.warn('Supabase session recovery failed:', supabaseError);
@@ -349,16 +374,16 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           // Strategy 2: Try manual localStorage recovery (mobile browsers may have delayed storage)
           try {
             authDebug.logRecovery('localStorage', false);
-            
+
             if (typeof window !== 'undefined') {
               const storageKey = 'sb-' + process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token';
               const storedSession = localStorage.getItem(storageKey);
-              
+
               if (storedSession) {
                 const sessionData = JSON.parse(storedSession);
                 if (sessionData?.user && sessionData?.access_token) {
                   logger.debug('Session recovered via localStorage fallback');
-                  
+
                   // Validate the token by trying to use it
                   const { data: { user }, error } = await authService.getSupabaseClient().auth.setSession({
                     access_token: sessionData.access_token,
@@ -380,16 +405,16 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           // Strategy 3: Try sessionStorage as fallback
           try {
             authDebug.logRecovery('sessionStorage', false);
-            
+
             if (typeof window !== 'undefined') {
               const storageKey = 'sb-' + process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token';
               const sessionStored = sessionStorage.getItem(storageKey);
-              
+
               if (sessionStored) {
                 const sessionData = JSON.parse(sessionStored);
                 if (sessionData?.user && sessionData?.access_token) {
                   logger.debug('Session recovered via sessionStorage fallback');
-                  
+
                   const { data: { user }, error } = await authService.getSupabaseClient().auth.setSession({
                     access_token: sessionData.access_token,
                     refresh_token: sessionData.refresh_token
@@ -418,7 +443,9 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
             if (result) {
               authDebug.markSuccess('cached_getUser');
             } else {
-              authDebug.markFailed('getCachedUser returned null');
+              // No session found - this is expected on login page or after logout
+              // Don't log as error, just return null
+              logger.debug('No cached user found - expected after logout or on login page');
             }
             return result;
           } catch (error) {
@@ -440,14 +467,14 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
                 const logoutTime = parseInt(logoutMarker);
                 const now = Date.now();
                 const tenMinutes = 10 * 60 * 1000;
-                
+
                 if (now - logoutTime < tenMinutes) {
                   logger.debug('Skipping session recovery - user recently logged out');
                   authDebug.markFailed('user_recently_logged_out');
                   return null;
                 }
               }
-              
+
               // Last attempt with direct getUser call
               try {
                 const { data: { user: finalUser } } = await authService.getSupabaseClient().auth.getUser();
@@ -459,7 +486,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
                 logger.debug('Final fallback also failed:', finalError);
               }
             }
-            
+
             authDebug.markFailed('all_recovery_strategies_exhausted');
             return null;
           }
@@ -472,6 +499,31 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
 
     // Get initial user with enhanced mobile handling
     const initializeAuth = async () => {
+      // OPTIMIZED: If we have an initial user from SSR, skip heavy client-side recovery
+      if (initialUser) {
+        logger.debug('Auth initialized with SSR user');
+        isInitializing = false;
+
+        // Still set up periodic session validation for mobile browsers if needed
+        if (needsMobileHandling) {
+          sessionCheckInterval = setInterval(async () => {
+            try {
+              const currentUser = await recoverSession();
+              if (!currentUser && mounted) {
+                logger.warn('Mobile session lost, triggering logout');
+                setUser(null);
+                if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+                  window.location.replace('/login?expired=true');
+                }
+              }
+            } catch (error) {
+              logger.error('Mobile session check failed:', error);
+            }
+          }, 30000);
+        }
+        return;
+      }
+
       try {
         // Log browser capabilities for debugging
         logger.debug('Auth initialization - Browser info:', {
@@ -492,10 +544,10 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         });
 
         const userPromise = recoverSession();
-        
+
         try {
           const user = await Promise.race([userPromise, timeoutPromise]);
-          
+
           if (mounted) {
             setUser(user);
             isInitializing = false;
@@ -511,7 +563,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
                       const logoutTime = parseInt(logoutMarker);
                       const now = Date.now();
                       const oneHour = 60 * 60 * 1000;
-                      
+
                       // If logout was recent (within 1 hour), don't attempt recovery
                       if (now - logoutTime < oneHour) {
                         logger.debug('Skipping session recovery - user recently logged out');
@@ -519,7 +571,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
                       }
                     }
                   }
-                  
+
                   const currentUser = await recoverSession();
                   if (!currentUser && mounted) {
                     logger.warn('Mobile session lost, triggering logout');
@@ -539,7 +591,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
             logger.warn('Auth initialization timed out, but allowing user to continue with limited functionality');
             setUser(null);
             isInitializing = false;
-            
+
             // Don't mark as failed - let user retry by refreshing or manual login
             setError({
               message: 'Authentication is taking longer than expected. Please refresh the page or try logging in again.',
@@ -559,7 +611,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
                 : 'Failed to initialize authentication',
           });
           isInitializing = false;
-          
+
           // Log timeout or failure
           if (isTimeout) {
             authDebug.logTimeout('auth_initialization', needsMobileHandling ? 20000 : 10000);
@@ -604,22 +656,26 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         else if (event === 'SIGNED_OUT') {
           if (mounted) {
             logger.info('Auth state changed to SIGNED_OUT');
+
+            // Clear user cache to prevent stale data
+            userCache.current.clear();
+
             setUser(null);
             isInitializing = false;
-            
+
             // Clear session check interval to prevent post-logout recovery attempts
             clearSessionCheck();
-            
+
             // Mark user as logged out to prevent session recovery attempts
             if (typeof window !== 'undefined') {
               localStorage.setItem('user_logged_out', Date.now().toString());
               sessionStorage.setItem('user_logged_out', Date.now().toString());
-              
+
               // Clear any remaining auth tokens
               localStorage.removeItem('supabase.auth.token');
               sessionStorage.removeItem('supabase.auth.token');
             }
-            
+
             // Only redirect if not already on login page
             if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
               logger.debug('Redirecting to login page after sign out');
@@ -736,10 +792,10 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
  */
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
-  
+
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  
+
   return context;
 }

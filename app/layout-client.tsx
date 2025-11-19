@@ -9,12 +9,14 @@ import { OfflineIndicator } from '@/components/common/offline-indicator';
 import { Toaster } from '@/components/ui/toaster';
 import { PerformanceDashboard } from '@/components/debug/performance-dashboard';
 import { ShareFolderModal } from '@/components/modals/share-folder-modal';
+import { AuthUser } from '@/lib/types/auth';
 
 interface LayoutClientProps {
   children: React.ReactNode;
+  initialUser?: AuthUser | null;
 }
 
-export function LayoutClient({ children }: LayoutClientProps) {
+export function LayoutClient({ children, initialUser }: LayoutClientProps) {
   return (
     <ThemeProvider
       attribute="class"
@@ -24,7 +26,7 @@ export function LayoutClient({ children }: LayoutClientProps) {
     >
       <QueryProvider>
         <ResourceHints />
-        <AuthProvider>
+        <AuthProvider initialUser={initialUser}>
           <StoreInitializer />
           <OfflineIndicator />
           {children}
