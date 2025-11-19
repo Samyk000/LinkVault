@@ -25,7 +25,7 @@ export function FolderActionsMenu({ folder, onEdit, onDelete }: FolderActionsMen
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-muted/50 hover:text-foreground transition-colors duration-200">
             <MoreVertical className="h-4 w-4" />
             <span className="sr-only">Folder actions</span>
           </Button>
@@ -36,8 +36,11 @@ export function FolderActionsMenu({ folder, onEdit, onDelete }: FolderActionsMen
             Edit Folder
           </DropdownMenuItem>
           
-          <DropdownMenuItem 
-            onSelect={() => setShowShareModal(true)}
+          <DropdownMenuItem
+            onSelect={() => {
+              console.log('FolderActionsMenu: Share button clicked, opening modal');
+              setShowShareModal(true);
+            }}
             className="text-orange-600 focus:bg-orange-50 focus:text-orange-600"
           >
             <Share2 className="h-4 w-4 mr-2" />

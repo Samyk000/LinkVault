@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS folder_shares (
 -- Create share_analytics table for tracking views
 CREATE TABLE IF NOT EXISTS share_analytics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  share_id VARCHAR(255) NOT NULL REFERENCES folder_shares(share_id) ON DELETE CASCADE,
+  share_id UUID NOT NULL REFERENCES folder_shares(id) ON DELETE CASCADE,
   viewer_ip INET,
   user_agent TEXT,
   viewed_at TIMESTAMP DEFAULT NOW(),
@@ -34,12 +34,12 @@ CREATE INDEX IF NOT EXISTS idx_share_analytics_share_id ON share_analytics(share
 CREATE INDEX IF NOT EXISTS idx_share_analytics_viewed_at ON share_analytics(viewed_at);
 
 -- Create function to increment view count
-CREATE OR REPLACE FUNCTION increment_share_view_count(share_id_param VARCHAR)
+CREATE OR REPLACE FUNCTION increment_share_view_count(share_id_param UUID)
 RETURNS void AS $$
 BEGIN
-  UPDATE folder_shares 
-  SET view_count = view_count + 1 
-  WHERE share_id = share_id_param;
+  UPDATE folder_shares
+  SET view_count = view_count + 1
+  WHERE id = share_id_param;
 END;
 $$ LANGUAGE plpgsql;
 

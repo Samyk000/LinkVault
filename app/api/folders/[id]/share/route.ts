@@ -1,11 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 
 export const runtime = 'nodejs';
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -65,23 +65,37 @@ export async function POST(
       }
 
       // Create share record
-      const { error: shareError } = await supabase
+      console.log('Creating share record with data:', {
+        folder_id: folderId,
+        share_id: shareId,
+        user_id: user.id,
+        created_by: user.id
+      });
+      
+      const { data, error: shareError } = await supabase
         .from('folder_shares')
         .insert({
           folder_id: folderId,
           share_id: shareId,
+          user_id: user.id,
           created_by: user.id
-        });
+        })
+        .select()
+        .single();
+
+      console.log('Share record creation result:', { data, shareError });
 
       if (shareError) {
+        console.error('Share record creation failed:', shareError);
         return NextResponse.json(
-          { error: 'Failed to create share record' },
+          { error: 'Failed to create share record', details: shareError.message },
           { status: 500 }
         );
       }
     }
 
-    const shareUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/share/folder/${shareId}`;
+    const baseUrl = request.nextUrl.origin;
+    const shareUrl = `${baseUrl}/share/folder/${shareId}`;
 
     return NextResponse.json({
       success: true,
@@ -100,7 +114,7 @@ export async function POST(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {

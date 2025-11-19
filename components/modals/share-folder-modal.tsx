@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Copy, Link as LinkIcon, Eye, EyeOff, CheckCircle, Share2 } from 'lucide-react';
-import { useStore } from '@/store/useStore';
 import { useToast } from '@/hooks/use-toast';
+import { useStore } from '@/store/useStore';
 
 interface ShareFolderModalProps {
   isOpen?: boolean;
@@ -24,51 +24,49 @@ export function ShareFolderModal({ isOpen, onClose, folder }: ShareFolderModalPr
   const [shareUrl, setShareUrl] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // Store-based state for global modal usage
+  const isShareFolderModalOpen = useStore((state) => state.isShareFolderModalOpen);
+  const setShareFolderModalOpen = useStore((state) => state.setShareFolderModalOpen);
+  const folderToShare = useStore((state) => state.folderToShare);
+
+  // Use props if provided, otherwise fall back to store
+  const effectiveIsOpen = isOpen !== undefined ? isOpen : isShareFolderModalOpen;
+  const effectiveFolder = folder || folderToShare;
+  const effectiveOnClose = onClose || (() => setShareFolderModalOpen(false));
+
   const { toast } = useToast();
 
+  // Clean component initialization (minimal logging)
+  useEffect(() => {
+    if (isOpen !== undefined || folder !== undefined) {
+      console.log('ShareFolderModal: Initialized');
+    }
+  }, [isOpen, folder]);
+
   const generateShareUrl = useCallback(async () => {
-    if (!folder) return;
+    // Prevent multiple simultaneous calls
+    if (!effectiveFolder || isGenerating || shareUrl) return;
 
     setIsGenerating(true);
     
     try {
-      console.log('Generating share URL for folder:', {
-        folderId: folder.id,
-        folderName: folder.name
-      });
-
-      const response = await fetch('/api/shares', {
+      const response = await fetch(`/api/folders/${effectiveFolder.id}/share`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          folderId: folder.id,
-        }),
-      });
-
-      console.log('Share API response received:', {
-        status: response.status,
-        ok: response.ok
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Share API error:', { status: response.status, error: errorData });
         throw new Error(errorData.error || `Failed to create share link (Status: ${response.status})`);
       }
 
       const data = await response.json();
-      console.log('Share API success response:', data);
       
       if (data.success) {
-        setShareUrl(data.data.shareUrl);
-        
-        console.log('Share URL set successfully:', {
-          shareUrl: data.data.shareUrl,
-          shareId: data.data.id
-        });
-        
+        setShareUrl(data.shareUrl);
         toast({
           title: "Share link created",
           description: "Your folder is now shareable with a secure link.",
@@ -77,7 +75,7 @@ export function ShareFolderModal({ isOpen, onClose, folder }: ShareFolderModalPr
         throw new Error('Failed to create share link');
       }
     } catch (error) {
-      console.error('Error in generateShareUrl:', error);
+      console.error('Share link creation failed:', error);
       toast({
         variant: "destructive",
         title: "Error creating share link",
@@ -86,22 +84,22 @@ export function ShareFolderModal({ isOpen, onClose, folder }: ShareFolderModalPr
     } finally {
       setIsGenerating(false);
     }
-  }, [folder, toast]);
+  }, [effectiveFolder, isGenerating, shareUrl, toast]);
 
   useEffect(() => {
     // Clear share URL when modal closes
-    if (!isOpen) {
+    if (!effectiveIsOpen) {
       setShareUrl('');
       setCopySuccess(false);
     }
-  }, [isOpen]);
+  }, [effectiveIsOpen]);
 
   useEffect(() => {
-    // Auto-create share when modal opens
-    if (isOpen && folder && !shareUrl && !isGenerating) {
+    // Auto-create share when modal opens (only once)
+    if (effectiveIsOpen && effectiveFolder && !shareUrl && !isGenerating) {
       generateShareUrl();
     }
-  }, [isOpen, folder, shareUrl, generateShareUrl, isGenerating]);
+  }, [effectiveIsOpen, effectiveFolder, shareUrl, generateShareUrl, isGenerating]);
 
   const handleCopyUrl = useCallback(async () => {
     if (!shareUrl) return;
@@ -124,14 +122,16 @@ export function ShareFolderModal({ isOpen, onClose, folder }: ShareFolderModalPr
     }
   }, [shareUrl, toast]);
 
-  const handleClose = () => {
-    onClose?.();
+  const handleClose = useCallback(() => {
+    effectiveOnClose();
     setShareUrl('');
     setCopySuccess(false);
-  };
+  }, [effectiveOnClose]);
+
+  // Removed excessive render logging for cleaner console
 
   return (
-    <Dialog open={isOpen || false} onOpenChange={(open) => {
+    <Dialog open={effectiveIsOpen || false} onOpenChange={(open) => {
       if (!open) {
         handleClose();
       }
@@ -143,7 +143,7 @@ export function ShareFolderModal({ isOpen, onClose, folder }: ShareFolderModalPr
             Share Folder
           </DialogTitle>
           <DialogDescription>
-            Share &ldquo;{folder?.name}&rdquo; ({folder?.linkCount} links)
+            Share &ldquo;{effectiveFolder?.name}&rdquo; ({effectiveFolder?.linkCount} links)
           </DialogDescription>
         </DialogHeader>
 

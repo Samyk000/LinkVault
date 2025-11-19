@@ -22,6 +22,13 @@ export default async function SharedFolderPage({ params }: SharedFolderPageProps
   try {
     const supabase = await createClient();
     
+    // Get headers for analytics
+    const headersList = await import('next/headers');
+    const headers = await headersList.headers();
+    const clientIP = headers.get('x-forwarded-for') || headers.get('x-real-ip') || 'unknown';
+    const userAgent = headers.get('user-agent') || 'unknown';
+    const referrer = headers.get('referer') || null;
+    
     // Get share information with folder and links
     console.log('Querying share with ID:', { shareId, shareIdType: typeof shareId, shareIdValue: shareId });
     
@@ -46,7 +53,7 @@ export default async function SharedFolderPage({ params }: SharedFolderPageProps
           )
         )
       `)
-      .eq('id', shareId.toString())
+      .eq('share_id', shareId.toString())
       .single();
     
     console.log('Share query result:', {
@@ -56,6 +63,24 @@ export default async function SharedFolderPage({ params }: SharedFolderPageProps
       hasFolders: !!share?.folders,
       queryShareId: shareId.toString()
     });
+    
+    // Track view analytics (non-blocking)
+    try {
+      // Track view analytics (fire and forget)
+      await supabase
+        .from('share_analytics')
+        .insert({
+          share_id: share.id,
+          viewer_ip: clientIP,
+          user_agent: userAgent,
+          referral_source: referrer
+        });
+
+      // Increment view count
+      await supabase.rpc('increment_share_view_count', { share_id_param: share.id });
+    } catch (err) {
+      console.warn('Analytics tracking failed:', err);
+    }
     
     if (shareError) {
       console.error('Share query detailed error:', {
