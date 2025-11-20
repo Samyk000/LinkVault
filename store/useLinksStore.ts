@@ -18,11 +18,11 @@ interface LinksState {
   links: Link[];
   isLoading: boolean;
   editingLinkId: string | null;
-  
+
   // Actions - State Management
   setLinks: (links: Link[]) => void;
   setLoading: (isLoading: boolean) => void;
-  
+
   // Actions - Single Link Operations
   addLink: (linkData: Omit<Link, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>) => Promise<void>;
   updateLink: (id: string, updates: Partial<Link>) => Promise<void>;
@@ -30,18 +30,18 @@ interface LinksState {
   restoreLink: (id: string) => Promise<void>;
   permanentlyDeleteLink: (id: string) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
-  
+
   // Actions - Bulk Link Operations
   bulkUpdateLinks: (ids: string[], updates: Partial<Link>) => Promise<void>;
   bulkDeleteLinks: (ids: string[]) => Promise<void>;
   bulkRestoreLinks: (ids: string[]) => Promise<void>;
   bulkMoveLinks: (ids: string[], folderId: string | null) => Promise<void>;
   bulkToggleFavoriteLinks: (ids: string[], isFavorite: boolean) => Promise<void>;
-  
+
   // Actions - Trash Operations
   emptyTrash: () => Promise<void>;
   restoreAllFromTrash: () => Promise<void>;
-  
+
   // Actions - UI State
   setEditingLink: (linkId: string | null) => void;
 }
@@ -51,19 +51,19 @@ export const useLinksStore = create<LinksState>((set, get) => ({
   links: [],
   isLoading: false,
   editingLinkId: null,
-  
+
   /**
    * Sets the links array directly
    * @param {Link[]} links - Array of links to set
    */
   setLinks: (links) => set({ links }),
-  
+
   /**
    * Sets the loading state
    * @param {boolean} isLoading - Loading state
    */
   setLoading: (isLoading) => set({ isLoading }),
-  
+
   /**
    * Adds a new link with enhanced session validation and reliability
    * @param {Omit<Link, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>} linkData - Link data to create
@@ -72,17 +72,17 @@ export const useLinksStore = create<LinksState>((set, get) => ({
    */
   addLink: async (linkData) => {
     const browserInfo = detectMobileBrowser();
-    
+
     try {
       // CRITICAL: Sanitize input data to prevent XSS
       const sanitizedData = sanitizeLinkData(linkData);
-      
+
       // ENHANCED: Validate session before attempting to save
       let user = null;
       try {
         const { data: { user: currentUser } } = await createClient().auth.getUser();
         user = currentUser;
-        
+
         if (!user) {
           throw new Error('User not authenticated. Please log in again.');
         }
@@ -92,12 +92,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         await new Promise(resolve => setTimeout(resolve, 500));
         const { data: { user: retryUser } } = await createClient().auth.getUser();
         user = retryUser;
-        
+
         if (!user) {
           throw new Error('Session expired. Please refresh the page and try again.');
         }
       }
-      
+
       // Generate temporary ID for optimistic update
       const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const tempLink: Link = {
@@ -107,7 +107,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      
+
       // Optimistic update with conflict detection
       set((state) => {
         // Check for existing links with same URL to prevent duplicates
@@ -116,29 +116,29 @@ export const useLinksStore = create<LinksState>((set, get) => ({
           link.url === linkData.url &&
           link.deletedAt === null
         );
-        
+
         if (existingLink) {
           logger.warn('Duplicate link detected, skipping optimistic update');
           return state;
         }
-        
+
         return { links: [...state.links, tempLink] };
       });
-      
+
       // ENHANCED: Add timeout protection with mobile-specific duration and retry logic
-      const timeoutDuration = browserInfo.isMobile ? 20000 : 15000; // Increased timeout for reliability
-      const maxRetries = 2; // Allow one retry for network issues
+      const timeoutDuration = browserInfo.isMobile ? 12000 : 8000; // Reduced timeout for better UX (8s desktop, 12s mobile)
+      const maxRetries = 1; // Reduce retries to 1 to fail faster
       let lastError: Error | null = null;
-      
+
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
           const savePromise = linksDatabaseService.addLink(sanitizedData);
           const timeoutPromise = new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('Add link timeout - please check your connection')), timeoutDuration)
           );
-          
+
           const newLink = await Promise.race([savePromise, timeoutPromise]);
-          
+
           // Replace temp link with real link, handling potential conflicts
           set((state) => {
             const filteredLinks = state.links.filter((link) => link.id !== tempId);
@@ -150,43 +150,43 @@ export const useLinksStore = create<LinksState>((set, get) => ({
             }
             return { links: [...filteredLinks, newLink] };
           });
-          
+
           logger.debug('Link added successfully:', {
             id: newLink.id,
             url: newLink.url,
             attempt: attempt + 1
           });
           return; // Success, exit the function
-          
+
         } catch (error) {
           lastError = error instanceof Error ? error : new Error('Unknown error');
-          
+
           // Don't retry on certain errors that won't improve
           if (error instanceof Error && (
-              error.message?.includes('authentication') ||
-              error.message?.includes('not authenticated') ||
-              error.message?.includes('timeout'))) {
+            error.message?.includes('authentication') ||
+            error.message?.includes('not authenticated') ||
+            error.message?.includes('timeout'))) {
             break;
           }
-          
+
           // Wait before retry with exponential backoff
           if (attempt < maxRetries) {
-            const delay = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s
+            const delay = 500 * Math.pow(2, attempt); // 500ms, 1s
             logger.warn(`Link save attempt ${attempt + 1} failed, retrying in ${delay}ms:`, error);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
       }
-      
+
       // If we get here, all retries failed
       throw lastError || new Error('Failed to save link after multiple attempts');
-      
+
     } catch (error) {
       // Enhanced error handling with rollback
       set((state) => ({
         links: state.links.filter((link) => !link.id.startsWith('temp-')),
       }));
-      
+
       logger.error('Error adding link:', {
         error: error instanceof Error ? error.message : 'Unknown error',
         linkData: { url: linkData.url, title: linkData.title },
@@ -196,7 +196,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw error;
     }
   },
-  
+
   /**
    * Updates an existing link with sanitization and validation
    * @param {string} id - Link ID
@@ -210,29 +210,29 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       if (!originalLink) {
         throw new Error(`Link with ID ${id} not found`);
       }
-      
+
       // CRITICAL: Sanitize update data to prevent XSS
       const sanitizedUpdates = sanitizeLinkData(updates);
-      
+
       // Optimistic update with validation
       const updatedLink = {
         ...originalLink,
         ...sanitizedUpdates,
         updatedAt: new Date().toISOString()
       };
-      
+
       set((state) => ({
         links: state.links.map((link) =>
           link.id === id ? updatedLink : link
         ),
       }));
-      
+
       // ENHANCED: Add timeout protection to prevent hanging updates
       const updatePromise = linksDatabaseService.updateLink(id, sanitizedUpdates);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Update link timeout - please check your connection and try again')), 10000)
       );
-      
+
       await Promise.race([updatePromise, timeoutPromise]);
     } catch (error) {
       // Revert optimistic update on error
@@ -242,7 +242,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
           links: state.links.map((link) => (link.id === id ? originalLink : link)),
         }));
       }
-      
+
       logger.error('Error updating link:', {
         linkId: id,
         updates,
@@ -252,7 +252,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw error;
     }
   },
-  
+
   /**
    * Soft deletes a link (moves to trash)
    * @param {string} id - Link ID
@@ -262,11 +262,11 @@ export const useLinksStore = create<LinksState>((set, get) => ({
   deleteLink: async (id) => {
     const deletedAt = new Date().toISOString();
     const originalLink = get().links.find((link) => link.id === id);
-    
+
     if (!originalLink) {
       throw new Error(`Link with ID ${id} not found`);
     }
-    
+
     try {
       // Optimistic update with validation
       set((state) => ({
@@ -274,13 +274,13 @@ export const useLinksStore = create<LinksState>((set, get) => ({
           link.id === id ? { ...link, deletedAt, updatedAt: deletedAt } : link
         ),
       }));
-      
+
       // ENHANCED: Add timeout protection to prevent hanging deletes
       const deletePromise = linksDatabaseService.deleteLink(id);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Delete link timeout - please check your connection and try again')), 10000)
       );
-      
+
       await Promise.race([deletePromise, timeoutPromise]);
     } catch (error) {
       // Revert optimistic update on error
@@ -289,7 +289,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
           link.id === id ? { ...link, deletedAt: null, updatedAt: originalLink.updatedAt } : link
         ),
       }));
-      
+
       logger.error('Error deleting link:', {
         linkId: id,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -298,7 +298,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw error;
     }
   },
-  
+
   /**
    * Restores a link from trash
    * @param {string} id - Link ID
@@ -315,7 +315,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
             : link
         ),
       }));
-      
+
       // Update in database
       await linksDatabaseService.restoreLink(id);
     } catch (error) {
@@ -331,7 +331,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw error;
     }
   },
-  
+
   /**
    * Permanently deletes a link
    * @param {string} id - Link ID
@@ -344,11 +344,11 @@ export const useLinksStore = create<LinksState>((set, get) => ({
     if (!linkToDelete) {
       throw new Error('Link not found');
     }
-    
+
     try {
       // Optimistic delete
       set((state) => ({ links: state.links.filter((link) => link.id !== id) }));
-      
+
       // Delete from database
       await linksDatabaseService.permanentlyDeleteLink(id);
     } catch (error) {
@@ -358,7 +358,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw error;
     }
   },
-  
+
   /**
    * Toggles favorite status of a link
    * @param {string} id - Link ID
@@ -369,9 +369,9 @@ export const useLinksStore = create<LinksState>((set, get) => ({
     try {
       const link = get().links.find((l) => l.id === id);
       if (!link) return;
-      
+
       const newFavoriteState = !link.isFavorite;
-      
+
       // Optimistic update
       set((state) => ({
         links: state.links.map((link) =>
@@ -380,7 +380,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
             : link
         ),
       }));
-      
+
       // Update in database
       await linksDatabaseService.updateLink(id, { isFavorite: newFavoriteState });
     } catch (error) {
@@ -394,7 +394,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw error;
     }
   },
-  
+
   /**
    * Bulk updates multiple links with the same updates
    * @param {string[]} ids - Array of link IDs to update
@@ -404,13 +404,13 @@ export const useLinksStore = create<LinksState>((set, get) => ({
    */
   bulkUpdateLinks: async (ids, updates) => {
     if (ids.length === 0) return;
-    
+
     const browserInfo = detectMobileBrowser();
-    
+
     try {
       // Store original links for rollback with enhanced conflict detection
       const originalLinks = get().links.filter(link => ids.includes(link.id));
-      
+
       // Optimistic update with conflict detection
       set((state) => {
         const updatedLinks = state.links.map((link) => {
@@ -427,14 +427,14 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         });
         return { links: updatedLinks };
       });
-      
+
       // Update in database with timeout protection
       const timeoutDuration = browserInfo.isMobile ? 20000 : 15000;
       const updatePromise = linksDatabaseService.bulkUpdateLinks(ids, updates);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Bulk update timeout - please check your connection')), timeoutDuration)
       );
-      
+
       await Promise.race([updatePromise, timeoutPromise]);
     } catch (error) {
       // Enhanced rollback with conflict resolution
@@ -445,7 +445,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
           return original || link;
         }),
       }));
-      
+
       logger.error('Error bulk updating links:', {
         error: error instanceof Error ? error.message : 'Unknown error',
         linkIds: ids,
@@ -456,7 +456,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw error;
     }
   },
-  
+
   /**
    * Bulk soft deletes multiple links (moves to trash)
    * @param {string[]} ids - Array of link IDs to delete
@@ -465,19 +465,19 @@ export const useLinksStore = create<LinksState>((set, get) => ({
    */
   bulkDeleteLinks: async (ids) => {
     if (ids.length === 0) return;
-    
+
     const deletedAt = new Date().toISOString();
-    
+
     try {
       // Optimistic update
       set((state) => ({
         links: state.links.map((link) =>
-          ids.includes(link.id) 
-            ? { ...link, deletedAt, updatedAt: deletedAt } 
+          ids.includes(link.id)
+            ? { ...link, deletedAt, updatedAt: deletedAt }
             : link
         ),
       }));
-      
+
       // Update in database
       await linksDatabaseService.bulkDeleteLinks(ids);
     } catch (error) {
@@ -491,7 +491,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw error;
     }
   },
-  
+
   /**
    * Bulk restores multiple links from trash
    * @param {string[]} ids - Array of link IDs to restore
@@ -500,7 +500,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
    */
   bulkRestoreLinks: async (ids) => {
     if (ids.length === 0) return;
-    
+
     try {
       // Optimistic update
       set((state) => ({
@@ -510,7 +510,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
             : link
         ),
       }));
-      
+
       // Update in database
       await linksDatabaseService.bulkRestoreLinks(ids);
     } catch (error) {
@@ -526,7 +526,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw error;
     }
   },
-  
+
   /**
    * Bulk moves multiple links to a specific folder
    * @param {string[]} ids - Array of link IDs to move
@@ -536,12 +536,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
    */
   bulkMoveLinks: async (ids, folderId) => {
     if (ids.length === 0) return;
-    
+
     // Store original folder IDs for rollback BEFORE optimistic update
     const originalLinks = get().links
       .filter(link => ids.includes(link.id))
       .map(link => ({ id: link.id, folderId: link.folderId }));
-    
+
     try {
       // Optimistic update
       set((state) => ({
@@ -551,11 +551,11 @@ export const useLinksStore = create<LinksState>((set, get) => ({
             : link
         ),
       }));
-      
+
       // Update in database with timeout protection
       await Promise.race([
         linksDatabaseService.bulkMoveLinks(ids, folderId),
-        new Promise<never>((_, reject) => 
+        new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Move links timeout - please check your connection')), 10000)
         )
       ]);
@@ -571,7 +571,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw error;
     }
   },
-  
+
   /**
    * Bulk toggles favorite status for multiple links
    * @param {string[]} ids - Array of link IDs to toggle
@@ -581,11 +581,11 @@ export const useLinksStore = create<LinksState>((set, get) => ({
    */
   bulkToggleFavoriteLinks: async (ids, isFavorite) => {
     if (ids.length === 0) return;
-    
+
     try {
       // Store original favorite states for rollback
       const originalLinks = get().links.filter(link => ids.includes(link.id));
-      
+
       // Optimistic update
       set((state) => ({
         links: state.links.map((link) =>
@@ -594,7 +594,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
             : link
         ),
       }));
-      
+
       // Update in database
       await linksDatabaseService.bulkToggleFavoriteLinks(ids, isFavorite);
     } catch (error) {
@@ -610,7 +610,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw error;
     }
   },
-  
+
   /**
    * Permanently deletes all trashed links
    * @returns {Promise<void>}
@@ -619,13 +619,13 @@ export const useLinksStore = create<LinksState>((set, get) => ({
   emptyTrash: async () => {
     // Store deleted links for rollback BEFORE optimistic update
     const deletedLinks = get().links.filter((link) => link.deletedAt !== null);
-    
+
     try {
       // Optimistic delete
       set((state) => ({
         links: state.links.filter((link) => link.deletedAt === null),
       }));
-      
+
       // Delete from database
       await linksDatabaseService.emptyTrash();
     } catch (error) {
@@ -635,7 +635,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw error;
     }
   },
-  
+
   /**
    * Restores all trashed links
    * @returns {Promise<void>}
@@ -644,7 +644,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
   restoreAllFromTrash: async () => {
     // Store original state BEFORE optimistic update
     const originalLinks = get().links.map(link => ({ ...link }));
-    
+
     try {
       // Optimistic update
       set((state) => ({
@@ -654,7 +654,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
             : link
         ),
       }));
-      
+
       // Update in database
       await linksDatabaseService.restoreAllFromTrash();
     } catch (error) {
@@ -664,7 +664,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw error;
     }
   },
-  
+
   /**
    * Sets the currently editing link ID
    * @param {string | null} linkId - Link ID to edit

@@ -77,7 +77,7 @@ export class LinksDatabaseService {
 
     try {
       const queryStartTime = Date.now();
-      
+
       // Optimized query with better indexing strategy
       const queryPromise = this.supabase
         .from('links')
@@ -188,7 +188,7 @@ export class LinksDatabaseService {
       }
 
       // Invalidate cache
-      this.invalidateUserCache(user.id);
+      // Cache invalidation moved to after success
 
       const linkData = {
         user_id: user.id,
@@ -224,6 +224,10 @@ export class LinksDatabaseService {
       if (!isLink(createdLink)) {
         throw new DatabaseError('Invalid link data received from database', { linkId: data.id });
       }
+
+      // Invalidate cache after successful creation
+      this.invalidateUserCache(user.id);
+
       return createdLink;
     } catch (error) {
       if (error instanceof DatabaseError || error instanceof AuthenticationError) {
@@ -245,10 +249,10 @@ export class LinksDatabaseService {
         throw new AuthenticationError('User not authenticated');
       }
 
-      this.invalidateUserCache(user.id);
+      // Cache invalidation moved to after success
 
       const updateData: LinkUpdateData = {};
-      
+
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.description !== undefined) updateData.description = updates.description;
       if (updates.url !== undefined) updateData.url = updates.url;
@@ -279,6 +283,10 @@ export class LinksDatabaseService {
       if (!isLink(link)) {
         throw new DatabaseError('Invalid link data received from database', { linkId: data.id });
       }
+
+      // Invalidate cache after successful update
+      this.invalidateUserCache(user.id);
+
       return link;
     } catch (error) {
       if (error instanceof DatabaseError || error instanceof AuthenticationError) {
@@ -299,7 +307,7 @@ export class LinksDatabaseService {
         throw new AuthenticationError('User not authenticated');
       }
 
-      this.invalidateUserCache(user.id);
+      // Cache invalidation moved to after success
 
       const { error } = await this.supabase
         .from('links')
@@ -310,6 +318,9 @@ export class LinksDatabaseService {
       if (error) {
         throw new DatabaseError('Failed to delete link', { linkId: id }, error as Error);
       }
+
+      // Invalidate cache after successful deletion
+      this.invalidateUserCache(user.id);
     } catch (error) {
       if (error instanceof DatabaseError || error instanceof AuthenticationError) {
         throw error;
@@ -329,7 +340,7 @@ export class LinksDatabaseService {
         throw new AuthenticationError('User not authenticated');
       }
 
-      this.invalidateUserCache(user.id);
+      // Cache invalidation moved to after success
 
       const { error } = await this.supabase
         .from('links')
@@ -340,6 +351,9 @@ export class LinksDatabaseService {
       if (error) {
         throw new DatabaseError('Failed to restore link', { linkId: id }, error as Error);
       }
+
+      // Invalidate cache after successful restoration
+      this.invalidateUserCache(user.id);
     } catch (error) {
       if (error instanceof DatabaseError || error instanceof AuthenticationError) {
         throw error;
@@ -359,7 +373,7 @@ export class LinksDatabaseService {
         throw new AuthenticationError('User not authenticated');
       }
 
-      this.invalidateUserCache(user.id);
+      // Cache invalidation moved to after success
 
       const { error } = await this.supabase
         .from('links')
@@ -370,6 +384,9 @@ export class LinksDatabaseService {
       if (error) {
         throw new DatabaseError('Failed to permanently delete link', { linkId: id }, error as Error);
       }
+
+      // Invalidate cache after successful deletion
+      this.invalidateUserCache(user.id);
     } catch (error) {
       if (error instanceof DatabaseError || error instanceof AuthenticationError) {
         throw error;
@@ -390,12 +407,12 @@ export class LinksDatabaseService {
 
       if (ids.length === 0) return [];
 
-      this.invalidateUserCache(user.id);
+      // Cache invalidation moved to after success
 
       const updateData: LinkUpdateData & { updated_at: string } = {
         updated_at: new Date().toISOString(),
       };
-      
+
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.description !== undefined) updateData.description = updates.description;
       if (updates.url !== undefined) updateData.url = updates.url;
@@ -422,6 +439,7 @@ export class LinksDatabaseService {
       }
 
       // Validate and transform results
+      // Validate and transform results
       const links = data.map((dbLink: DatabaseLink) => {
         const link = this.transformLinkFromDB(dbLink);
         if (!isLink(link)) {
@@ -430,6 +448,9 @@ export class LinksDatabaseService {
         }
         return link;
       }).filter((link): link is Link => link !== null);
+
+      // Invalidate cache after successful bulk update
+      this.invalidateUserCache(user.id);
 
       return links;
     } catch (error) {
@@ -464,7 +485,8 @@ export class LinksDatabaseService {
       if (error) {
         throw new DatabaseError('Failed to bulk delete links', { linkIds: ids }, error as Error);
       }
-      
+
+      // Invalidate cache after successful bulk deletion
       this.invalidateUserCache(user.id);
     } catch (error) {
       logger.error('Error bulk deleting links:', error);
@@ -499,7 +521,8 @@ export class LinksDatabaseService {
       if (error) {
         throw new DatabaseError('Failed to bulk restore links', { linkIds: ids }, error as Error);
       }
-      
+
+      // Invalidate cache after successful bulk restoration
       this.invalidateUserCache(user.id);
     } catch (error) {
       logger.error('Error bulk restoring links:', error);
@@ -534,7 +557,7 @@ export class LinksDatabaseService {
         throw new AuthenticationError('User not authenticated');
       }
 
-      this.invalidateUserCache(user.id);
+      // Cache invalidation moved to after success
 
       const { error } = await this.supabase
         .from('links')
@@ -545,6 +568,9 @@ export class LinksDatabaseService {
       if (error) {
         throw new DatabaseError('Failed to empty trash', { userId: user.id }, error as Error);
       }
+
+      // Invalidate cache after successful operation
+      this.invalidateUserCache(user.id);
     } catch (error) {
       if (error instanceof DatabaseError || error instanceof AuthenticationError) {
         throw error;
@@ -563,7 +589,7 @@ export class LinksDatabaseService {
         throw new AuthenticationError('User not authenticated');
       }
 
-      this.invalidateUserCache(user.id);
+      // Cache invalidation moved to after success
 
       const { error } = await this.supabase
         .from('links')
@@ -574,6 +600,9 @@ export class LinksDatabaseService {
       if (error) {
         throw new DatabaseError('Failed to restore all from trash', { userId: user.id }, error as Error);
       }
+
+      // Invalidate cache after successful operation
+      this.invalidateUserCache(user.id);
     } catch (error) {
       if (error instanceof DatabaseError || error instanceof AuthenticationError) {
         throw error;

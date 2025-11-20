@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { LayoutClient } from "./layout-client";
 import { createClient } from "@/lib/supabase/server";
@@ -7,9 +7,21 @@ import { createClient } from "@/lib/supabase/server";
 // OPTIMIZED: Font with display swap to prevent blocking LCP
 const inter = Inter({
   subsets: ["latin"],
-  display: 'swap', // Prevents font from blocking render
+  display: 'swap',
   preload: true,
   adjustFontFallback: true,
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  display: 'swap',
+  variable: '--font-space-grotesk',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  display: 'swap',
+  variable: '--font-jetbrains-mono',
 });
 
 export const metadata: Metadata = {
@@ -41,7 +53,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
         <LayoutClient initialUser={authUser}>
           {children}
         </LayoutClient>

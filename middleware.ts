@@ -64,7 +64,7 @@ async function retryWithBackoff<T>(
     if (process.env.NODE_ENV === 'development') {
       logger.warn(`Middleware operation failed, retrying in ${delay}ms (attempt ${attempt + 1}/${RETRY_CONFIG.maxRetries})`);
     }
-    
+
     await new Promise(resolve => setTimeout(resolve, delay));
     return retryWithBackoff(operation, attempt + 1);
   }
@@ -76,7 +76,8 @@ async function retryWithBackoff<T>(
  * @returns {boolean} Whether authentication is required
  */
 function requiresAuth(pathname: string): boolean {
-  const publicPaths = ['/login', '/signup', '/auth', '/api/auth'];
+  if (pathname === '/') return false;
+  const publicPaths = ['/login', '/signup', '/auth', '/api/auth', '/share'];
   return !publicPaths.some(path => pathname.startsWith(path));
 }
 
@@ -96,7 +97,7 @@ function isAuthPage(pathname: string): boolean {
  */
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
-  
+
   // Skip middleware for static files and API routes (except auth)
   if (
     pathname.startsWith('/_next/') ||
@@ -141,7 +142,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
     if (sessionError) {
       logger.error('Auth error in middleware:', sessionError);
-      
+
       // Handle specific session errors
       if (sessionError.message?.includes('AuthSessionMissingError')) {
         // Session is missing, redirect to login if auth is required
@@ -152,7 +153,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         }
         return response;
       }
-      
+
       // For other auth errors, allow the request to continue but log the error
       if (process.env.NODE_ENV === 'development') {
         logger.warn('Non-critical auth error, continuing:', sessionError);
@@ -174,7 +175,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       loginUrl.searchParams.set('redirectTo', pathname);
       return NextResponse.redirect(loginUrl);
     }
-    
+
     // CRITICAL: Allow authenticated users to access /app without redirecting
     // This ensures session persistence works correctly
     if (isAuthenticated && pathname.startsWith('/app')) {
@@ -209,7 +210,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   } catch (error) {
     logger.error('Critical middleware error:', error);
-    
+
     // For critical errors, handle gracefully
     if (requiresAuth(pathname)) {
       // If it's a protected route and we have a critical error, redirect to login
@@ -218,7 +219,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       loginUrl.searchParams.set('error', 'session_error');
       return NextResponse.redirect(loginUrl);
     }
-    
+
     // For public routes, allow the request to continue
     return response;
   }

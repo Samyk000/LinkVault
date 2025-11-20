@@ -297,7 +297,6 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
     let isInitializing = true;
     let initializationTimeout: NodeJS.Timeout | null = null;
     let sessionCheckInterval: NodeJS.Timeout | null = null;
-    let dataLoadTimeout: NodeJS.Timeout | null = null;
 
     // Enhanced mobile-aware session recovery with storage fallback
     const recoverSession = async (): Promise<AuthUser | null> => {
