@@ -32,46 +32,9 @@ import { logger } from "@/lib/utils/logger";
 import * as LucideIcons from "lucide-react";
 import { cn } from "@/lib/utils";
 import { cn as themeCn } from "@/lib/theme";
+import { isAllowedImageDomain, getImageQuality, getFetchPriority, getBlurDataURL, getPlaceholder } from "@/utils/image.utils";
 
-/**
- * Check if an image URL is from an allowed domain
- * @param url - Image URL to check
- * @returns {boolean} Whether the domain is in the allowed list
- */
-function isAllowedImageDomain(url: string): boolean {
-  try {
-    const urlObj = new URL(url);
-    const allowedDomains = [
-      'img.youtube.com',
-      'i.ytimg.com',
-      'pbs.twimg.com',
-      'scontent.cdninstagram.com',
-      'instagram.com',
-      'media.licdn.com',
-      'avatars.githubusercontent.com',
-      'github.com',
-      'miro.medium.com',
-      'cdn-images-1.medium.com',
-      'external-preview.redd.it',
-      'preview.redd.it',
-      'scontent.xx.fbcdn.net',
-      'p16-sign-sg.tiktokcdn.com',
-      'images.unsplash.com',
-      'via.placeholder.com',
-      'c1.tablecdn.com',
-      'www.google.com',
-      'www.google.com.sg',
-      'favicons.githubusercontent.com',
-      'logo.clearbit.com',
-      'icons.duckduckgo.com',
-      'www.favicon.cc',
-    ];
-    return allowedDomains.some(domain => urlObj.hostname === domain || urlObj.hostname.endsWith(`.${domain}`));
-  } catch {
-    // If URL parsing fails, assume it's not allowed
-    return false;
-  }
-}
+
 
 interface LinkCardProps {
   link: Link;
@@ -388,8 +351,8 @@ function LinkCardComponent({ link, isInTrash = false, isSelected = false, onTogg
     <>
       <Card
         className={`group relative overflow-hidden transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-primary/5 cursor-pointer border-2 rounded-xl will-change-transform ${isSelected
-            ? 'ring-2 ring-primary ring-offset-2 ring-offset-background border-primary/50'
-            : 'border-border/50 hover:border-border'
+          ? 'ring-2 ring-primary ring-offset-2 ring-offset-background border-primary/50'
+          : 'border-border/50 hover:border-border'
           }`}
         onClick={handleCardClick}
       >
@@ -467,14 +430,16 @@ function LinkCardComponent({ link, isInTrash = false, isSelected = false, onTogg
               onError={() => setImageError(true)}
               loading={priority ? "eager" : "lazy"}
               priority={priority}
-              // OPTIMIZED: Use placeholder for better perceived performance
-              placeholder={priority ? "blur" : "empty"}
-              blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4="
+              // OPTIMIZED: Use utility functions for consistent image optimization
+              placeholder={getPlaceholder(priority)}
+              blurDataURL={getBlurDataURL(priority)}
               // Use unoptimized for external images that might not be in the allowed list
-              // This prevents errors while still allowing images to load
               unoptimized={!isAllowedImageDomain(link.thumbnail)}
-              // OPTIMIZED: Add quality setting for better performance
-              quality={75}
+              // OPTIMIZED: Variable quality for faster loading (75 for priority, 60 for others)
+              quality={getImageQuality(priority)}
+              // OPTIMIZED: fetchPriority for browser-level optimization
+              //@ts-ignore - fetchPriority is a valid HTML attribute
+              fetchPriority={getFetchPriority(priority)}
             />
           ) : (
             <div className="flex h-full items-center justify-center bg-gradient-to-br from-muted to-muted/50">

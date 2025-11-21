@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import { Eye, EyeOff, Mail, Lock, User, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import type { SignInData, SignUpData } from '@/lib/types/auth';
+import { AUTH_CONSTANTS, AUTH_ERROR_MESSAGES } from '@/constants/auth.constants';
 
 interface FormErrors {
   email?: string;
@@ -93,6 +94,51 @@ export function LoginForm(): React.JSX.Element {
     displayName: '',
   });
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  /**
+   * Clear errors when user starts typing
+   */
+  const handleSignInEmailChange = (value: string) => {
+    setSignInData({ ...signInData, email: value });
+    if (formErrors.email || formErrors.general) {
+      setFormErrors({ ...formErrors, email: undefined, general: undefined });
+    }
+  };
+
+  const handleSignInPasswordChange = (value: string) => {
+    setSignInData({ ...signInData, password: value });
+    if (formErrors.password || formErrors.general) {
+      setFormErrors({ ...formErrors, password: undefined, general: undefined });
+    }
+  };
+
+  const handleSignUpEmailChange = (value: string) => {
+    setSignUpData({ ...signUpData, email: value });
+    if (formErrors.email || formErrors.general) {
+      setFormErrors({ ...formErrors, email: undefined, general: undefined });
+    }
+  };
+
+  const handleSignUpPasswordChange = (value: string) => {
+    setSignUpData({ ...signUpData, password: value });
+    if (formErrors.password || formErrors.general) {
+      setFormErrors({ ...formErrors, password: undefined, general: undefined });
+    }
+  };
+
+  const handleSignUpNameChange = (value: string) => {
+    setSignUpData({ ...signUpData, displayName: value });
+    if (formErrors.displayName || formErrors.general) {
+      setFormErrors({ ...formErrors, displayName: undefined, general: undefined });
+    }
+  };
+
+  const handleConfirmPasswordChange = (value: string) => {
+    setConfirmPassword(value);
+    if (formErrors.confirmPassword || formErrors.general) {
+      setFormErrors({ ...formErrors, confirmPassword: undefined, general: undefined });
+    }
+  };
 
   /**
    * Validates email format
@@ -195,13 +241,38 @@ export function LoginForm(): React.JSX.Element {
       const { error } = await signIn(signInData);
 
       if (!error) {
-        // OPTIMIZED: Verify session immediately without artificial delay
+        // Verify session with retry logic (max 2 retries)
         const supabaseClient = createClient();
-        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        let sessionVerified = false;
+        let lastError: any = null;
 
-        if (sessionError || !session) {
+        for (let attempt = 0; attempt < AUTH_CONSTANTS.MAX_RETRIES; attempt++) {
+          try {
+            const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+
+            if (!sessionError && session) {
+              sessionVerified = true;
+              break;
+            }
+
+            lastError = sessionError;
+
+            // Wait before retry
+            if (attempt < AUTH_CONSTANTS.MAX_RETRIES - 1) {
+              await new Promise(resolve => setTimeout(resolve, AUTH_CONSTANTS.RETRY_DELAY));
+            }
+          } catch (err) {
+            lastError = err;
+            if (attempt < AUTH_CONSTANTS.MAX_RETRIES - 1) {
+              await new Promise(resolve => setTimeout(resolve, AUTH_CONSTANTS.RETRY_DELAY));
+            }
+          }
+        }
+
+        if (!sessionVerified) {
+          logger.error('Session verification failed after retries:', lastError);
           setFormErrors({
-            general: 'Session not established. Please try again.',
+            general: AUTH_ERROR_MESSAGES.SESSION_NOT_ESTABLISHED,
           });
           setIsSigningIn(false);
           return;
@@ -210,40 +281,50 @@ export function LoginForm(): React.JSX.Element {
         // Clear form ONLY after session is confirmed
         setSignInData({ email: '', password: '' });
 
-        // OPTIMIZED: Redirect immediately - data loading will start in background
-        // Redirect using window.location for more reliable navigation
-        window.location.href = '/app';
+        // Show success toast before navigation
+        toast({
+          title: "Success",
+          description: "Redirecting to your vault...",
+          variant: "default",
+        });
 
-        // Note: Toast won't show because we're redirecting, but that's okay
+        // CRITICAL FIX: Clear loading state BEFORE navigation to prevent stuck spinner
+        setIsSigningIn(false);
+
+        // Use Next.js router for smooth client-side navigation
+        // This allows the loading state to properly update
+        router.push('/app');
+
       } else {
         // Enhanced error messages
-        let errorMessage = error.message || 'An unexpected error occurred. Please try again.';
+        let errorMessage = error.message || AUTH_ERROR_MESSAGES.UNEXPECTED_ERROR;
 
         // User-friendly error messages
         if (error.message?.includes('Invalid login credentials') ||
           error.message?.includes('Invalid email or password')) {
-          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+          errorMessage = AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS;
         } else if (error.message?.includes('Email not confirmed')) {
-          errorMessage = 'Please verify your email address before signing in. Check your inbox for a verification link.';
+          errorMessage = AUTH_ERROR_MESSAGES.EMAIL_NOT_CONFIRMED;
         } else if (error.message?.includes('Too many requests')) {
-          errorMessage = 'Too many login attempts. Please wait a few minutes and try again.';
+          errorMessage = AUTH_ERROR_MESSAGES.TOO_MANY_REQUESTS;
         } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
-          errorMessage = 'Network error. Please check your internet connection and try again.';
+          errorMessage = AUTH_ERROR_MESSAGES.NETWORK_ERROR;
         }
 
         setFormErrors({
           general: errorMessage,
         });
+        setIsSigningIn(false);
       }
     } catch (err) {
       logger.error('Sign in error:', err);
       setFormErrors({
         general: 'An unexpected error occurred. Please try again.',
       });
-    } finally {
       setIsSigningIn(false);
     }
   };
+
 
   /**
    * Handles sign up form submission with better error handling
@@ -357,7 +438,7 @@ export function LoginForm(): React.JSX.Element {
                           type="email"
                           placeholder="Enter your email"
                           value={signInData.email}
-                          onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
+                          onChange={(e) => handleSignInEmailChange(e.target.value)}
                           className={`pl-10 pr-4 h-12 bg-gray-50 border border-gray-300 text-black placeholder:text-gray-400 focus:bg-white focus:border-black focus:ring-0 rounded-none font-mono text-sm transition-all duration-200 hover:border-gray-400 ${formErrors.email
                             ? 'border-red-500 focus:border-red-500'
                             : ''
@@ -385,7 +466,7 @@ export function LoginForm(): React.JSX.Element {
                           type={showPassword ? 'text' : 'password'}
                           placeholder="Enter your password"
                           value={signInData.password}
-                          onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
+                          onChange={(e) => handleSignInPasswordChange(e.target.value)}
                           className={`pl-10 pr-12 h-12 bg-gray-50 border border-gray-300 text-black placeholder:text-gray-400 focus:bg-white focus:border-black focus:ring-0 rounded-none font-mono text-sm transition-all duration-200 hover:border-gray-400 ${formErrors.password
                             ? 'border-red-500 focus:border-red-500'
                             : ''
@@ -445,7 +526,7 @@ export function LoginForm(): React.JSX.Element {
                           type="text"
                           placeholder="Enter your display name"
                           value={signUpData.displayName}
-                          onChange={(e) => setSignUpData({ ...signUpData, displayName: e.target.value })}
+                          onChange={(e) => handleSignUpNameChange(e.target.value)}
                           className={`pl-10 pr-4 h-12 bg-gray-50 border border-gray-300 text-black placeholder:text-gray-400 focus:bg-white focus:border-black focus:ring-0 rounded-none font-mono text-sm transition-all duration-200 hover:border-gray-400 ${formErrors.displayName
                             ? 'border-red-500 focus:border-red-500'
                             : ''
@@ -473,7 +554,7 @@ export function LoginForm(): React.JSX.Element {
                           type="email"
                           placeholder="Enter your email"
                           value={signUpData.email}
-                          onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
+                          onChange={(e) => handleSignUpEmailChange(e.target.value)}
                           className={`pl-10 pr-4 h-12 bg-gray-50 border border-gray-300 text-black placeholder:text-gray-400 focus:bg-white focus:border-black focus:ring-0 rounded-none font-mono text-sm transition-all duration-200 hover:border-gray-400 ${formErrors.email
                             ? 'border-red-500 focus:border-red-500'
                             : ''
@@ -501,7 +582,7 @@ export function LoginForm(): React.JSX.Element {
                           type={showPassword ? 'text' : 'password'}
                           placeholder="Create a password (min. 8 characters)"
                           value={signUpData.password}
-                          onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
+                          onChange={(e) => handleSignUpPasswordChange(e.target.value)}
                           className={`pl-10 pr-12 h-12 bg-gray-50 border border-gray-300 text-black placeholder:text-gray-400 focus:bg-white focus:border-black focus:ring-0 rounded-none font-mono text-sm transition-all duration-200 hover:border-gray-400 ${formErrors.password
                             ? 'border-red-500 focus:border-red-500'
                             : ''
@@ -540,7 +621,7 @@ export function LoginForm(): React.JSX.Element {
                           type={showConfirmPassword ? 'text' : 'password'}
                           placeholder="Confirm your password"
                           value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          onChange={(e) => handleConfirmPasswordChange(e.target.value)}
                           className={`pl-10 pr-12 h-12 bg-gray-50 border border-gray-300 text-black placeholder:text-gray-400 focus:bg-white focus:border-black focus:ring-0 rounded-none font-mono text-sm transition-all duration-200 hover:border-gray-400 ${formErrors.confirmPassword
                             ? 'border-red-500 focus:border-red-500'
                             : ''

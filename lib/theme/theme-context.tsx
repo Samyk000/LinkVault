@@ -65,7 +65,7 @@ interface ThemeProviderProps {
  */
 export function ThemeProvider({
   children,
-  defaultTheme = ThemeMode.SYSTEM,
+  defaultTheme = ThemeMode.LIGHT, // Changed from SYSTEM to LIGHT for better UX
   storageKey = THEME_STORAGE_KEY,
   disableSystemTheme = false,
 }: ThemeProviderProps) {
@@ -135,7 +135,7 @@ export function ThemeProvider({
     // Get the effective theme mode (resolved theme for system preference)
     const effectiveMode = resolvedTheme === 'dark' ? ThemeMode.DARK : ThemeMode.LIGHT;
     const newTheme = getThemeConfig(effectiveMode);
-    
+
     setThemeConfig(newTheme);
     applyThemeVariables(newTheme);
   }, [resolvedTheme]);
@@ -172,11 +172,11 @@ export function ThemeProvider({
  */
 export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
-  
+
   if (context === undefined) {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
-  
+
   return context;
 }
 

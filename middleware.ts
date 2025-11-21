@@ -32,10 +32,12 @@ interface RetryConfig {
   maxDelay: number;
 }
 
+// OPTIMIZED: Reduced retries from 3 to 1 for faster response
+// Session checks are fast, retries usually only help with network glitches
 const RETRY_CONFIG: RetryConfig = {
-  maxRetries: 3,
-  baseDelay: 500,
-  maxDelay: 5000,
+  maxRetries: 1, // Reduced from 3
+  baseDelay: 300, // Reduced from 500ms
+  maxDelay: 1000, // Reduced from 5000ms
 };
 
 /**
@@ -114,9 +116,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   });
 
   try {
-    // Create Supabase client with retry mechanism
-    const supabase = await retryWithBackoff(async () => {
-      return createServerClient(
+    // OPTIMIZATION: Skip expensive retry logic on auth pages where session isn't expected
+    // This significantly speeds up the login page load
+    const skipRetries = isAuthPage(pathname);
+
+    // Create Supabase client
+    const supabase = skipRetries
+      ? createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
@@ -132,13 +138,33 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
             },
           },
         }
-      );
-    });
+      )
+      : await retryWithBackoff(async () => {
+        return createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          {
+            cookies: {
+              getAll() {
+                return request.cookies.getAll();
+              },
+              setAll(cookiesToSet) {
+                cookiesToSet.forEach(({ name, value, options }) => {
+                  request.cookies.set(name, value);
+                  response.cookies.set(name, value, options);
+                });
+              },
+            },
+          }
+        );
+      });
 
-    // Get user session with retry mechanism
-    const { data: { session }, error: sessionError } = await retryWithBackoff(async () => {
-      return supabase.auth.getSession();
-    });
+    // Get user session (skip retries on auth pages for performance)
+    const { data: { session }, error: sessionError } = skipRetries
+      ? await supabase.auth.getSession()
+      : await retryWithBackoff(async () => {
+        return supabase.auth.getSession();
+      });
 
     if (sessionError) {
       logger.error('Auth error in middleware:', sessionError);

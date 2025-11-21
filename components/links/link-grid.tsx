@@ -16,9 +16,10 @@ import { EmptyState } from "@/components/common/empty-state";
 import { useUIStore, useSettingsStore } from "@/store";
 import { Sparkles } from "lucide-react";
 import { INITIAL_LOAD_DELAY } from "@/constants";
+import { IMAGE_CONSTANTS } from "@/constants/image.constants";
+import { logger } from "@/lib/utils/logger";
 
-const INITIAL_LOAD = 8; // Load 8 cards initially
-const LOAD_MORE = 8; // Load 8 more when scrolling
+
 
 interface LinkGridProps {
   links: Link[];
@@ -77,37 +78,36 @@ function LinkGridComponent({ links, isLoading = false, isInTrash = false, select
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  
+
   // Debug: Log link IDs to help identify duplicates
   useEffect(() => {
     if (process.env.NODE_ENV === 'development' && links.length > 0) {
       const linkIds = links.map(link => link.id);
       const duplicates = linkIds.filter((id, index) => linkIds.indexOf(id) !== index);
-      
+
       if (duplicates.length > 0) {
-        console.warn('🔗 Duplicate link IDs detected:', {
+        logger.warn('Duplicate link IDs detected:', {
           totalLinks: links.length,
           uniqueLinks: new Set(linkIds).size,
           duplicates: [...new Set(duplicates)],
-          allIds: linkIds
         });
       }
     }
   }, [links]);
-  
+
   const isListView = settings.viewMode === 'list';
 
   // Reset displayed links when links change
   useEffect(() => {
     // Deduplicate links by ID to prevent React key conflicts
     const uniqueLinks = Array.from(new Map(links.map(link => [link.id, link])).values());
-    
+
     // Log duplicate detection for debugging
-    if (uniqueLinks.length !== links.length) {
-      console.warn(`🔗 LinkGrid: Detected ${links.length - uniqueLinks.length} duplicate links. Original count: ${links.length}, deduplicated count: ${uniqueLinks.length}`);
+    if (uniqueLinks.length !== links.length && process.env.NODE_ENV === 'development') {
+      logger.warn(`Detected ${links.length - uniqueLinks.length} duplicate links. Original: ${links.length}, deduplicated: ${uniqueLinks.length}`);
     }
-    
-    setDisplayedLinks(uniqueLinks.slice(0, INITIAL_LOAD));
+
+    setDisplayedLinks(uniqueLinks.slice(0, IMAGE_CONSTANTS.INITIAL_LOAD_COUNT));
   }, [links]);
 
   // Lazy loading with intersection observer
@@ -133,21 +133,21 @@ function LinkGridComponent({ links, isLoading = false, isInTrash = false, select
                 // Deduplicate links to prevent React key conflicts
                 const uniqueLinks = Array.from(new Map(links.map(link => [link.id, link])).values());
                 const nextIndex = prev.length;
-                const nextBatch = uniqueLinks.slice(nextIndex, nextIndex + LOAD_MORE);
-                
+                const nextBatch = uniqueLinks.slice(nextIndex, nextIndex + IMAGE_CONSTANTS.LOAD_MORE_COUNT);
+
                 // Check for duplicates in the new batch
                 const newLinkIds = new Set(prev.map(link => link.id));
                 const filteredBatch = nextBatch.filter(link => !newLinkIds.has(link.id));
-                
+
                 return [...prev, ...filteredBatch];
               });
               setIsLoadingMore(false);
             }, INITIAL_LOAD_DELAY);
           }
         },
-        { 
+        {
           rootMargin: '300px',
-          threshold: 0.1 
+          threshold: 0.1
         }
       );
     }
@@ -169,7 +169,7 @@ function LinkGridComponent({ links, isLoading = false, isInTrash = false, select
   if (isLoading) {
     return (
       <div className={isListView ? "flex flex-col gap-4" : "grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"}>
-        {Array.from({ length: INITIAL_LOAD }).map((_, i) => (
+        {Array.from({ length: IMAGE_CONSTANTS.INITIAL_LOAD_COUNT }).map((_, i) => (
           <LinkCardSkeleton key={i} />
         ))}
       </div>
@@ -192,17 +192,16 @@ function LinkGridComponent({ links, isLoading = false, isInTrash = false, select
 
   return (
     <>
-      <div className={`transition-all duration-300 ease-in-out ${
-        isListView 
-          ? "flex flex-col gap-4" 
-          : "grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-      }`}>
+      <div className={`transition-all duration-300 ease-in-out ${isListView
+        ? "flex flex-col gap-4"
+        : "grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        }`}>
         {displayedLinks.map((link, index) => {
-          // OPTIMIZED: Prioritize first 3 images for LCP optimization
-          // This is critical for Largest Contentful Paint performance
-          // Only the first visible row should be prioritized to avoid waterfall loading
-          const isPriority = index < 3;
-          
+          // OPTIMIZED: Only prioritize first 2 images (first row on mobile) for LCP
+          // Reduced from 3 to 2 to prevent waterfall loading of too many eager images
+          // This dramatically improves initial page load speed for thumbnail-heavy pages
+          const isPriority = index < 2;
+
           return isListView ? (
             <LinkCardList
               key={link.id}
@@ -225,13 +224,13 @@ function LinkGridComponent({ links, isLoading = false, isInTrash = false, select
             />
           );
         })}
-        
+
         {/* Loading more skeletons */}
         {isLoadingMore && Array.from({ length: 6 }).map((_, i) => (
           <LinkCardSkeleton key={`loading-${i}`} />
         ))}
       </div>
-      
+
       {/* Intersection observer target */}
       {displayedLinks.length < links.length && !isLoadingMore && (
         <div ref={loadMoreRef} className="h-10 mt-6" />
