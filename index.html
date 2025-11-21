@@ -1,21 +1,24 @@
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LinkVault - System 2.0</title>
-    
+
     <!-- Fonts: Space Grotesk (Headings), Inter (Body), JetBrains Mono (Technical) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
     <!-- Remix Icons -->
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <script>
         tailwind.config = {
             theme: {
@@ -43,10 +46,14 @@
         .bg-noise {
             position: relative;
         }
+
         .bg-noise::before {
             content: "";
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
             pointer-events: none;
             z-index: 0;
@@ -63,13 +70,20 @@
             overflow: hidden;
             white-space: nowrap;
         }
+
         .marquee-content {
             display: inline-block;
             animation: marquee 20s linear infinite;
         }
+
         @keyframes marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(-50%);
+            }
         }
 
         /* Architectural Grid Lines */
@@ -83,11 +97,13 @@
         .hover-lift {
             transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
         }
+
         .hover-lift:hover {
             transform: translateY(-4px);
         }
     </style>
 </head>
+
 <body class="bg-white text-black font-sans antialiased selection:bg-accent selection:text-white">
 
     <!-- Navigation: Technical & Minimal -->
@@ -96,8 +112,10 @@
             <!-- Logo Area -->
             <div class="flex items-center gap-4">
                 <div class="w-3 h-3 bg-accent"></div>
-                <span class="font-display font-bold text-xl tracking-tight uppercase">LinkVault<span class="text-accent">.</span></span>
-                <span class="hidden md:block font-mono text-xs text-gray-400 ml-4 border-l border-gray-300 pl-4">V 2.4.0 STABLE</span>
+                <span class="font-display font-bold text-xl tracking-tight uppercase">LinkVault<span
+                        class="text-accent">.</span></span>
+                <span class="hidden md:block font-mono text-xs text-gray-400 ml-4 border-l border-gray-300 pl-4">V 2.4.0
+                    STABLE</span>
             </div>
 
             <!-- Center Links (Hidden on Mobile) -->
@@ -110,7 +128,8 @@
             <!-- Right Actions -->
             <div class="flex items-center gap-6">
                 <a href="#" class="font-display font-medium hover:text-accent transition">Login</a>
-                <a href="#" class="bg-black text-white px-6 py-2.5 font-mono text-xs font-bold uppercase tracking-wider hover:bg-accent transition-colors duration-300">
+                <a href="#"
+                    class="bg-black text-white px-6 py-2.5 font-mono text-xs font-bold uppercase tracking-wider hover:bg-accent transition-colors duration-300">
                     Start Archiving
                 </a>
             </div>
@@ -122,32 +141,40 @@
         <!-- Background Grid -->
         <div class="absolute inset-0 grid-bg z-0 pointer-events-none opacity-50"></div>
 
-        <div class="flex-1 max-w-[1600px] mx-auto w-full px-6 grid grid-cols-1lg:grid-cols-12 gap-0 h-full z-10 pt-12 lg:pt-20">
-            
+        <div
+            class="flex-1 max-w-[1600px] mx-auto w-full px-6 grid grid-cols-1lg:grid-cols-12 gap-0 h-full z-10 pt-12 lg:pt-20">
+
             <!-- Left Column: Typography -->
             <div class="col-span-1 lg:col-span-7 flex flex-col justify-between pb-20">
                 <div>
-                    <div class="inline-flex items-center gap-2 border border-black px-3 py-1 rounded-full mb-8 bg-white">
+                    <div
+                        class="inline-flex items-center gap-2 border border-black px-3 py-1 rounded-full mb-8 bg-white">
                         <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
                         <span class="font-mono text-xs uppercase font-bold">System Operational</span>
                     </div>
-                    
-                    <h1 class="font-display text-6xl md:text-8xl lg:text-[6.5rem] font-bold leading-[0.9] tracking-tighter mb-8 uppercase">
+
+                    <h1
+                        class="font-display text-6xl md:text-8xl lg:text-[6.5rem] font-bold leading-[0.9] tracking-tighter mb-8 uppercase">
                         Archive <br>
-                        <span class="text-transparent stroke-text" style="-webkit-text-stroke: 2px black; color: transparent;">The Void</span> <br>
+                        <span class="text-transparent stroke-text"
+                            style="-webkit-text-stroke: 2px black; color: transparent;">The Void</span> <br>
                         Into Matter
                     </h1>
 
-                    <p class="font-sans text-lg md:text-xl text-gray-600 max-w-lg leading-relaxed border-l-2 border-accent pl-6">
-                        Constructing your digital memory through parametric organization. 
+                    <p
+                        class="font-sans text-lg md:text-xl text-gray-600 max-w-lg leading-relaxed border-l-2 border-accent pl-6">
+                        Constructing your digital memory through parametric organization.
                         LinkVault captures URLs, extracts metadata, and builds your personal knowledge graph.
                     </p>
                 </div>
 
                 <div class="mt-12 flex items-center gap-8">
                     <button class="group relative px-8 py-4 bg-accent text-white overflow-hidden">
-                        <div class="absolute inset-0 w-full h-full bg-black transform translate-y-full transition-transform duration-300 group-hover:translate-y-0"></div>
-                        <span class="relative font-mono font-bold uppercase text-sm tracking-widest flex items-center gap-2">
+                        <div
+                            class="absolute inset-0 w-full h-full bg-black transform translate-y-full transition-transform duration-300 group-hover:translate-y-0">
+                        </div>
+                        <span
+                            class="relative font-mono font-bold uppercase text-sm tracking-widest flex items-center gap-2">
                             Initialize Vault <i class="ri-arrow-right-up-line"></i>
                         </span>
                     </button>
@@ -162,25 +189,31 @@
             <div class="col-span-1 lg:col-span-5 relative mt-12 lg:mt-0 flex flex-col justify-end lg:justify-center">
                 <!-- Decorative Circle -->
                 <div class="absolute top-0 right-0 w-64 h-64 bg-gray-100 rounded-full -z-10 mix-blend-multiply"></div>
-                
+
                 <!-- The Card Container -->
-                <div class="relative border border-black bg-white p-2 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] hover:shadow-[15px_15px_0px_0px_#FF4D00] transition-shadow duration-500">
-                    <div class="border border-gray-100 bg-gray-50 aspect-square relative overflow-hidden flex items-center justify-center group">
-                        
+                <div
+                    class="relative border border-black bg-white p-2 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] hover:shadow-[15px_15px_0px_0px_#FF4D00] transition-shadow duration-500">
+                    <div
+                        class="border border-gray-100 bg-gray-50 aspect-square relative overflow-hidden flex items-center justify-center group">
+
                         <!-- Technical Overlay UI -->
                         <div class="absolute top-4 left-4 z-20 font-mono text-[10px] flex flex-col gap-1">
                             <span class="bg-black text-white px-1">FIG 01. INTERFACE</span>
-                            <span class="bg-accent text-white px-1 opacity-0 group-hover:opacity-100 transition-opacity">SCANNING...</span>
+                            <span
+                                class="bg-accent text-white px-1 opacity-0 group-hover:opacity-100 transition-opacity">SCANNING...</span>
                         </div>
 
                         <!-- User Illustration Image -->
                         <!-- PLACE YOUR IMAGE HERE named 'hero-illustration.png' -->
-                        <img src="hero-illustration.png" alt="Digital Archive Illustration" class="w-4/5 h-4/5 object-contain mix-blend-multiply grayscale contrast-125 transition-transform duration-700 group-hover:scale-105">
-                        
+                        <img src="hero-illustration.png" alt="Digital Archive Illustration"
+                            class="w-4/5 h-4/5 object-contain mix-blend-multiply grayscale contrast-125 transition-transform duration-700 group-hover:scale-105">
+
                         <!-- Fallback if image not found -->
-                        <img src="https://img.freepik.com/free-vector/hand-drawn-web-design-concept_23-2147838387.jpg" class="w-4/5 h-4/5 object-contain mix-blend-multiply grayscale contrast-125 opacity-50 absolute inset-0 m-auto -z-10" alt="fallback">
+                        <img src="https://img.freepik.com/free-vector/hand-drawn-web-design-concept_23-2147838387.jpg"
+                            class="w-4/5 h-4/5 object-contain mix-blend-multiply grayscale contrast-125 opacity-50 absolute inset-0 m-auto -z-10"
+                            alt="fallback">
                     </div>
-                    
+
                     <!-- Bottom Label -->
                     <div class="mt-2 pt-2 border-t border-black flex justify-between items-center font-mono text-xs">
                         <span>INPUT_SOURCE: URL</span>
@@ -189,13 +222,15 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Scrolling Marquee Border -->
         <div class="border-y border-black bg-black text-white py-3 mt-12 lg:mt-0">
             <div class="marquee-container">
                 <div class="marquee-content font-mono text-sm uppercase tracking-[0.2em] font-bold">
-                    &nbsp; /// Capture Everything /// Organize The Web /// Knowledge Is Power /// Search Logic /// Auto-Tagging /// Social Sharing /// Secure Vault /// &nbsp;
-                    &nbsp; /// Capture Everything /// Organize The Web /// Knowledge Is Power /// Search Logic /// Auto-Tagging /// Social Sharing /// Secure Vault /// &nbsp;
+                    &nbsp; /// Capture Everything /// Organize The Web /// Knowledge Is Power /// Search Logic ///
+                    Auto-Tagging /// Social Sharing /// Secure Vault /// &nbsp;
+                    &nbsp; /// Capture Everything /// Organize The Web /// Knowledge Is Power /// Search Logic ///
+                    Auto-Tagging /// Social Sharing /// Secure Vault /// &nbsp;
                 </div>
             </div>
         </div>
@@ -215,20 +250,25 @@
 
         <!-- Grid Layout -->
         <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 grid-rows-2 gap-6 h-auto md:h-[800px]">
-            
+
             <!-- Feature 1: Auto Fetch (Large Square) -->
-            <div class="col-span-1 md:col-span-2 row-span-2 border border-black p-8 lg:p-12 bg-gray-50 hover:bg-white transition-colors duration-300 flex flex-col justify-between relative group overflow-hidden">
+            <div
+                class="col-span-1 md:col-span-2 row-span-2 border border-black p-8 lg:p-12 bg-gray-50 hover:bg-white transition-colors duration-300 flex flex-col justify-between relative group overflow-hidden">
                 <div class="absolute top-0 right-0 p-6">
-                    <i class="ri-download-cloud-2-line text-4xl opacity-20 group-hover:opacity-100 group-hover:text-accent transition-all"></i>
+                    <i
+                        class="ri-download-cloud-2-line text-4xl opacity-20 group-hover:opacity-100 group-hover:text-accent transition-all"></i>
                 </div>
                 <div class="relative z-10 mt-auto">
                     <h3 class="font-display text-4xl font-bold mb-4 uppercase">Auto-Fetch <br>Metadata</h3>
                     <p class="font-sans text-gray-600 leading-relaxed max-w-md">
-                        Stop manually typing. Paste a URL and the system automatically extracts the title, description, and cover image. Your library builds itself.
+                        Stop manually typing. Paste a URL and the system automatically extracts the title, description,
+                        and cover image. Your library builds itself.
                     </p>
                 </div>
                 <!-- Decorative Graphic -->
-                <div class="absolute top-[10%] left-[10%] w-full h-full border-l border-t border-gray-200 opacity-50 pointer-events-none"></div>
+                <div
+                    class="absolute top-[10%] left-[10%] w-full h-full border-l border-t border-gray-200 opacity-50 pointer-events-none">
+                </div>
             </div>
 
             <!-- Feature 2: Search (Tall Rectangle) -->
@@ -236,7 +276,7 @@
                 <div class="font-mono text-xs text-gray-500 mb-4">02 // RETRIEVAL</div>
                 <h3 class="font-display text-2xl font-bold mb-4">Semantic Search</h3>
                 <p class="font-sans text-gray-400 text-sm mb-8">Find content by title, tag, or description context.</p>
-                
+
                 <!-- Search UI Graphic -->
                 <div class="mt-auto border border-gray-800 rounded bg-gray-900 p-3">
                     <div class="flex items-center gap-2 border-b border-gray-700 pb-2 mb-2">
@@ -251,7 +291,8 @@
             </div>
 
             <!-- Feature 3: Folders (Square) -->
-            <div class="col-span-1 border border-gray-200 hover:border-black transition-colors p-8 flex flex-col justify-between group">
+            <div
+                class="col-span-1 border border-gray-200 hover:border-black transition-colors p-8 flex flex-col justify-between group">
                 <div>
                     <i class="ri-folder-settings-line text-3xl mb-4 text-accent"></i>
                     <h3 class="font-display text-2xl font-bold">Nested Folders</h3>
@@ -262,18 +303,23 @@
             </div>
 
             <!-- Feature 4: Sharing (Wide Rectangle across bottom right) -->
-            <div class="col-span-1 md:col-span-2 border border-black p-8 bg-accent text-white flex flex-col md:flex-row items-center justify-between relative overflow-hidden">
+            <div
+                class="col-span-1 md:col-span-2 border border-black p-8 bg-accent text-white flex flex-col md:flex-row items-center justify-between relative overflow-hidden">
                 <div class="relative z-10">
                     <h3 class="font-display text-3xl font-bold mb-2 uppercase">Network Node</h3>
-                    <p class="font-sans text-white/90 max-w-sm">Share entire folder collections via a single public URL. Collaboration logic enabled.</p>
+                    <p class="font-sans text-white/90 max-w-sm">Share entire folder collections via a single public URL.
+                        Collaboration logic enabled.</p>
                 </div>
                 <div class="relative z-10 mt-6 md:mt-0">
-                    <button class="bg-white text-accent px-6 py-3 font-mono text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors">
+                    <button
+                        class="bg-white text-accent px-6 py-3 font-mono text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors">
                         Generate Link
                     </button>
                 </div>
                 <!-- Background Pattern -->
-                <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle, white 2px, transparent 2px); background-size: 20px 20px;"></div>
+                <div class="absolute inset-0 opacity-10"
+                    style="background-image: radial-gradient(circle, white 2px, transparent 2px); background-size: 20px 20px;">
+                </div>
             </div>
 
         </div>
@@ -306,9 +352,9 @@
         <div class="max-w-5xl mx-auto bg-black text-white relative overflow-hidden">
             <!-- Orange Accent Block (Reference Style) -->
             <div class="absolute top-0 right-0 w-full md:w-1/3 h-full bg-accent z-0 block md:hidden lg:block"></div>
-            
+
             <div class="relative z-10 grid grid-cols-1 lg:grid-cols-3 min-h-[400px]">
-                
+
                 <!-- Text Side -->
                 <div class="col-span-2 p-12 md:p-20 flex flex-col justify-center bg-black">
                     <h2 class="font-display text-5xl md:text-6xl font-bold uppercase leading-tight mb-6">
@@ -317,10 +363,12 @@
                         <span class="text-gray-500">Adaptive.</span>
                     </h2>
                     <div class="flex flex-col md:flex-row gap-4 mt-8">
-                        <a href="#" class="bg-white text-black px-8 py-4 font-mono text-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-white transition-colors text-center">
+                        <a href="#"
+                            class="bg-white text-black px-8 py-4 font-mono text-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-white transition-colors text-center">
                             Sign Up / Access
                         </a>
-                        <a href="#" class="border border-gray-700 text-white px-8 py-4 font-mono text-sm font-bold uppercase tracking-widest hover:border-white transition-colors text-center">
+                        <a href="#"
+                            class="border border-gray-700 text-white px-8 py-4 font-mono text-sm font-bold uppercase tracking-widest hover:border-white transition-colors text-center">
                             Read Documentation
                         </a>
                     </div>
@@ -328,16 +376,17 @@
 
                 <!-- Graphic Side (The Orange Box) -->
                 <div class="col-span-1 bg-accent p-12 flex flex-col justify-between text-black">
-                    <div class="w-12 h-12 border-2 border-black rounded-full flex items-center justify-center animate-spin-slow">
+                    <div
+                        class="w-12 h-12 border-2 border-black rounded-full flex items-center justify-center animate-spin-slow">
                         <i class="ri-asterisk text-2xl"></i>
                     </div>
-                    
+
                     <div>
                         <h4 class="font-bold text-xl mb-2">Optimized structures, at every node.</h4>
                         <p class="font-mono text-xs leading-relaxed opacity-80">
                             // Where every constraint is met with calculation and every blueprint is a revolution.
                         </p>
-                        
+
                         <div class="mt-8 flex items-center gap-2">
                             <span class="w-2 h-2 bg-black rounded-full"></span>
                             <span class="font-mono text-[10px] uppercase font-bold">Status: Operational</span>
@@ -358,7 +407,7 @@
                         Designed for the architects of the internet. Organizing the digital void into usable matter.
                     </p>
                 </div>
-                
+
                 <div class="md:col-span-2">
                     <h4 class="font-mono text-xs font-bold uppercase mb-6 text-gray-400">Platform</h4>
                     <ul class="space-y-4 font-sans text-sm">
@@ -367,7 +416,7 @@
                         <li><a href="#" class="hover:text-accent hover:underline">Pricing</a></li>
                     </ul>
                 </div>
-                
+
                 <div class="md:col-span-2">
                     <h4 class="font-mono text-xs font-bold uppercase mb-6 text-gray-400">Legal</h4>
                     <ul class="space-y-4 font-sans text-sm">
@@ -379,20 +428,24 @@
                 <div class="md:col-span-3">
                     <h4 class="font-mono text-xs font-bold uppercase mb-6 text-gray-400">Connect</h4>
                     <div class="flex gap-4">
-                        <a href="#" class="w-10 h-10 border border-gray-200 flex items-center justify-center hover:bg-black hover:text-white transition-colors rounded-full">
+                        <a href="#"
+                            class="w-10 h-10 border border-gray-200 flex items-center justify-center hover:bg-black hover:text-white transition-colors rounded-full">
                             <i class="ri-twitter-x-line"></i>
                         </a>
-                        <a href="#" class="w-10 h-10 border border-gray-200 flex items-center justify-center hover:bg-black hover:text-white transition-colors rounded-full">
+                        <a href="#"
+                            class="w-10 h-10 border border-gray-200 flex items-center justify-center hover:bg-black hover:text-white transition-colors rounded-full">
                             <i class="ri-github-fill"></i>
                         </a>
-                        <a href="#" class="w-10 h-10 border border-gray-200 flex items-center justify-center hover:bg-black hover:text-white transition-colors rounded-full">
+                        <a href="#"
+                            class="w-10 h-10 border border-gray-200 flex items-center justify-center hover:bg-black hover:text-white transition-colors rounded-full">
                             <i class="ri-discord-fill"></i>
                         </a>
                     </div>
                 </div>
             </div>
 
-            <div class="flex flex-col md:flex-row justify-between items-center border-t border-gray-200 pt-8 font-mono text-[10px] uppercase text-gray-400">
+            <div
+                class="flex flex-col md:flex-row justify-between items-center border-t border-gray-200 pt-8 font-mono text-[10px] uppercase text-gray-400">
                 <span>© 2023 LinkVault Systems Inc.</span>
                 <span class="mt-2 md:mt-0">Designed by Request</span>
             </div>
@@ -400,4 +453,5 @@
     </footer>
 
 </body>
+
 </html>

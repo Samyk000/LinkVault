@@ -1,7 +1,7 @@
 /**
  * @file components/common/mobile-fab.tsx
  * @description Floating Action Button for mobile devices
- * @author LinkVault Team
+ * @author LinksVault Team
  * @created 2025-10-18
  * @modified 2025-10-19
  */

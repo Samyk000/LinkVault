@@ -59,7 +59,7 @@ export function LoginForm(): React.JSX.Element {
       if (tab === 'signup') {
         setActiveTab('signup');
       }
-      
+
       // Show message if session expired
       const expired = searchParams?.get('expired');
       if (expired === 'true') {
@@ -182,7 +182,7 @@ export function LoginForm(): React.JSX.Element {
 
     try {
       setIsSigningIn(true);
-      
+
       // Check if offline
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         setFormErrors({
@@ -193,12 +193,12 @@ export function LoginForm(): React.JSX.Element {
       }
 
       const { error } = await signIn(signInData);
-      
+
       if (!error) {
         // OPTIMIZED: Verify session immediately without artificial delay
         const supabaseClient = createClient();
         const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-        
+
         if (sessionError || !session) {
           setFormErrors({
             general: 'Session not established. Please try again.',
@@ -206,22 +206,22 @@ export function LoginForm(): React.JSX.Element {
           setIsSigningIn(false);
           return;
         }
-        
+
         // Clear form ONLY after session is confirmed
         setSignInData({ email: '', password: '' });
-        
+
         // OPTIMIZED: Redirect immediately - data loading will start in background
         // Redirect using window.location for more reliable navigation
         window.location.href = '/app';
-        
+
         // Note: Toast won't show because we're redirecting, but that's okay
       } else {
         // Enhanced error messages
         let errorMessage = error.message || 'An unexpected error occurred. Please try again.';
-        
+
         // User-friendly error messages
-        if (error.message?.includes('Invalid login credentials') || 
-            error.message?.includes('Invalid email or password')) {
+        if (error.message?.includes('Invalid login credentials') ||
+          error.message?.includes('Invalid email or password')) {
           errorMessage = 'Invalid email or password. Please check your credentials and try again.';
         } else if (error.message?.includes('Email not confirmed')) {
           errorMessage = 'Please verify your email address before signing in. Check your inbox for a verification link.';
@@ -230,7 +230,7 @@ export function LoginForm(): React.JSX.Element {
         } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
           errorMessage = 'Network error. Please check your internet connection and try again.';
         }
-        
+
         setFormErrors({
           general: errorMessage,
         });
@@ -260,7 +260,7 @@ export function LoginForm(): React.JSX.Element {
 
     try {
       setIsSigningUp(true);
-      
+
       // Check if offline
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         setFormErrors({
@@ -271,7 +271,7 @@ export function LoginForm(): React.JSX.Element {
       }
 
       const { error } = await signUp(signUpData);
-      
+
       if (!error) {
         // Show email verification notification
         toast({
@@ -280,17 +280,17 @@ export function LoginForm(): React.JSX.Element {
           variant: "success",
           icon: <CheckCircle className="size-4" />,
         });
-        
+
         // Switch to sign in tab
         setActiveTab('signin');
-        
+
         // Clear the signup form
         setSignUpData({ email: '', password: '', displayName: '' });
         setConfirmPassword('');
       } else {
         // Enhanced error messages
         let errorMessage = error.message || 'An unexpected error occurred. Please try again.';
-        
+
         // User-friendly error messages
         if (error.message?.includes('already registered') || error.message?.includes('already exists')) {
           errorMessage = 'An account with this email already exists. Please sign in instead.';
@@ -299,7 +299,7 @@ export function LoginForm(): React.JSX.Element {
         } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
           errorMessage = 'Network error. Please check your internet connection and try again.';
         }
-        
+
         setFormErrors({
           general: errorMessage,
         });
@@ -316,13 +316,13 @@ export function LoginForm(): React.JSX.Element {
 
   return (
     <>
-      <Card className="w-full max-w-md mx-auto border-2 border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
-        <CardHeader className="text-center pb-6">
-          <CardTitle className="text-2xl sm:text-3xl font-bold text-white mb-2">
-            Welcome to LinkVault
+      <Card className="w-full max-w-md mx-auto border border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-none min-h-[600px] transition-all duration-300">
+        <CardHeader className="text-center pb-6 border-b border-gray-100">
+          <CardTitle className="text-2xl sm:text-3xl font-display font-bold text-black mb-2 uppercase tracking-tight">
+            {activeTab === 'signin' ? 'Welcome Back' : 'Create Account'}
           </CardTitle>
-          <CardDescription className="text-gray-300 text-sm sm:text-base">
-            Organize and manage your links with ease
+          <CardDescription className="text-gray-500 font-mono text-xs uppercase tracking-wider">
+            {activeTab === 'signin' ? '// Authenticate to continue' : '// Join the system'}
           </CardDescription>
         </CardHeader>
 
@@ -337,255 +337,255 @@ export function LoginForm(): React.JSX.Element {
           )}
 
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'signin' | 'signup')}>
-            <TabsList className="grid w-full grid-cols-2 mb-6 h-11 bg-white/5 border border-white/10">
-              <TabsTrigger value="signin" className="text-sm font-medium data-[state=active]:bg-orange-500 data-[state=active]:text-black data-[state=active]:shadow-md transition-all">Sign In</TabsTrigger>
-              <TabsTrigger value="signup" className="text-sm font-medium data-[state=active]:bg-orange-500 data-[state=active]:text-black data-[state=active]:shadow-md transition-all">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-8 h-12 bg-gray-100 p-1 rounded-none border border-gray-200">
+              <TabsTrigger value="signin" className="text-xs font-mono font-bold uppercase data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-black rounded-none transition-all">Sign In</TabsTrigger>
+              <TabsTrigger value="signup" className="text-xs font-mono font-bold uppercase data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-black rounded-none transition-all">Sign Up</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-5">
-                <div className="space-y-2.5">
-                  <Label htmlFor="signin-email" className="text-sm font-medium text-gray-200">
-                    Email
-                  </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
-                    <Input
-                      id="signin-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={signInData.email}
-                      onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
-                      className={`pl-10 pr-4 h-11 bg-white/10 border-2 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-orange-500/50 ${
-                        formErrors.email
-                          ? 'border-red-400/50 focus:border-red-400'
-                          : ''
-                      }`}
-                      disabled={isSigningIn || isSigningUp}
-                      autoComplete="email"
-                      aria-describedby={formErrors.email ? 'signin-email-error' : undefined}
-                    />
-                  </div>
-                  {formErrors.email && (
-                    <p id="signin-email-error" className="text-sm text-red-300 mt-1">
-                      {formErrors.email}
-                    </p>
-                  )}
-                </div>
+            <div className="relative overflow-hidden min-h-[400px]">
+              <TabsContent value="signin" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+                <div key="signin" className="animate-in fade-in slide-in-from-right-8 duration-500 ease-out fill-mode-both">
+                  <form onSubmit={handleSignIn} className="space-y-5">
+                    <div className="space-y-2.5">
+                      <Label htmlFor="signin-email" className="text-xs font-mono font-bold uppercase text-gray-500">
+                        Email Address
+                      </Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                        <Input
+                          id="signin-email"
+                          type="email"
+                          placeholder="Enter your email"
+                          value={signInData.email}
+                          onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
+                          className={`pl-10 pr-4 h-12 bg-gray-50 border border-gray-300 text-black placeholder:text-gray-400 focus:bg-white focus:border-black focus:ring-0 rounded-none font-mono text-sm transition-all duration-200 hover:border-gray-400 ${formErrors.email
+                            ? 'border-red-500 focus:border-red-500'
+                            : ''
+                            }`}
+                          disabled={isSigningIn || isSigningUp}
+                          autoComplete="email"
+                          aria-describedby={formErrors.email ? 'signin-email-error' : undefined}
+                        />
+                      </div>
+                      {formErrors.email && (
+                        <p id="signin-email-error" className="text-sm text-red-300 mt-1">
+                          {formErrors.email}
+                        </p>
+                      )}
+                    </div>
 
-                <div className="space-y-2.5">
-                  <Label htmlFor="signin-password" className="text-sm font-medium text-gray-200">
-                    Password
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
-                    <Input
-                      id="signin-password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter your password"
-                      value={signInData.password}
-                      onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
-                      className={`pl-10 pr-12 h-11 bg-white/10 border-2 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-orange-500/50 ${
-                        formErrors.password
-                          ? 'border-red-400/50 focus:border-red-400'
-                          : ''
-                      }`}
-                      disabled={isSigningIn || isSigningUp}
-                      autoComplete="current-password"
-                      aria-describedby={formErrors.password ? 'signin-password-error' : undefined}
-                    />
+                    <div className="space-y-2.5">
+                      <Label htmlFor="signin-password" className="text-xs font-mono font-bold uppercase text-gray-500">
+                        Password
+                      </Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                        <Input
+                          id="signin-password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="Enter your password"
+                          value={signInData.password}
+                          onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
+                          className={`pl-10 pr-12 h-12 bg-gray-50 border border-gray-300 text-black placeholder:text-gray-400 focus:bg-white focus:border-black focus:ring-0 rounded-none font-mono text-sm transition-all duration-200 hover:border-gray-400 ${formErrors.password
+                            ? 'border-red-500 focus:border-red-500'
+                            : ''
+                            }`}
+                          disabled={isSigningIn || isSigningUp}
+                          autoComplete="current-password"
+                          aria-describedby={formErrors.password ? 'signin-password-error' : undefined}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-9 w-9 p-0 text-gray-400 hover:text-black hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                          disabled={isSigningIn || isSigningUp}
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        </Button>
+                      </div>
+                      {formErrors.password && (
+                        <p id="signin-password-error" className="text-sm text-red-300 mt-1">
+                          {formErrors.password}
+                        </p>
+                      )}
+                    </div>
+
                     <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-9 w-9 p-0 text-gray-400 hover:text-white hover:bg-white/10"
-                      onClick={() => setShowPassword(!showPassword)}
-                      disabled={isSigningIn || isSigningUp}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      type="submit"
+                      className="w-full h-12 bg-[#FF4D00] hover:bg-black hover:text-white text-white font-mono font-bold uppercase tracking-widest text-sm rounded-none transition-all duration-300 shadow-sm hover:shadow-md active:transform active:scale-[0.98]"
+                      disabled={isSigningIn}
                     >
-                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      {isSigningIn ? (
+                        <>
+                          <Loader2 className="mr-2 size-4 animate-spin" />
+                          Authenticating...
+                        </>
+                      ) : (
+                        'Initialize Session'
+                      )}
                     </Button>
-                  </div>
-                  {formErrors.password && (
-                    <p id="signin-password-error" className="text-sm text-red-300 mt-1">
-                      {formErrors.password}
-                    </p>
-                  )}
+                  </form>
                 </div>
+              </TabsContent>
 
-                <Button
-                  type="submit"
-                  className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-black font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-200"
-                  disabled={isSigningIn}
-                >
-                  {isSigningIn ? (
-                    <>
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                      Signing In...
-                    </>
-                  ) : (
-                    'Sign In'
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
+              <TabsContent value="signup" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+                <div key="signup" className="animate-in fade-in slide-in-from-right-8 duration-500 ease-out fill-mode-both">
+                  <form onSubmit={handleSignUp} className="space-y-5">
+                    <div className="space-y-2.5">
+                      <Label htmlFor="signup-name" className="text-xs font-mono font-bold uppercase text-gray-500">
+                        Display Name
+                      </Label>
+                      <div className="relative">
+                        <User className="absolute left-3.5 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                        <Input
+                          id="signup-name"
+                          type="text"
+                          placeholder="Enter your display name"
+                          value={signUpData.displayName}
+                          onChange={(e) => setSignUpData({ ...signUpData, displayName: e.target.value })}
+                          className={`pl-10 pr-4 h-12 bg-gray-50 border border-gray-300 text-black placeholder:text-gray-400 focus:bg-white focus:border-black focus:ring-0 rounded-none font-mono text-sm transition-all duration-200 hover:border-gray-400 ${formErrors.displayName
+                            ? 'border-red-500 focus:border-red-500'
+                            : ''
+                            }`}
+                          disabled={isSigningIn || isSigningUp}
+                          autoComplete="name"
+                          aria-describedby={formErrors.displayName ? 'signup-name-error' : undefined}
+                        />
+                      </div>
+                      {formErrors.displayName && (
+                        <p id="signup-name-error" className="text-sm text-red-300 mt-1">
+                          {formErrors.displayName}
+                        </p>
+                      )}
+                    </div>
 
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-5">
-                <div className="space-y-2.5">
-                  <Label htmlFor="signup-name" className="text-sm font-medium text-gray-200">
-                    Display Name
-                  </Label>
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Enter your display name"
-                      value={signUpData.displayName}
-                      onChange={(e) => setSignUpData({ ...signUpData, displayName: e.target.value })}
-                      className={`pl-10 pr-4 h-11 bg-white/10 border-2 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-orange-500/50 ${
-                        formErrors.displayName
-                          ? 'border-red-400/50 focus:border-red-400'
-                          : ''
-                      }`}
-                      disabled={isSigningIn || isSigningUp}
-                      autoComplete="name"
-                      aria-describedby={formErrors.displayName ? 'signup-name-error' : undefined}
-                    />
-                  </div>
-                  {formErrors.displayName && (
-                    <p id="signup-name-error" className="text-sm text-red-300 mt-1">
-                      {formErrors.displayName}
-                    </p>
-                  )}
-                </div>
+                    <div className="space-y-2.5">
+                      <Label htmlFor="signup-email" className="text-xs font-mono font-bold uppercase text-gray-500">
+                        Email Address
+                      </Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                        <Input
+                          id="signup-email"
+                          type="email"
+                          placeholder="Enter your email"
+                          value={signUpData.email}
+                          onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
+                          className={`pl-10 pr-4 h-12 bg-gray-50 border border-gray-300 text-black placeholder:text-gray-400 focus:bg-white focus:border-black focus:ring-0 rounded-none font-mono text-sm transition-all duration-200 hover:border-gray-400 ${formErrors.email
+                            ? 'border-red-500 focus:border-red-500'
+                            : ''
+                            }`}
+                          disabled={isSigningIn || isSigningUp}
+                          autoComplete="email"
+                          aria-describedby={formErrors.email ? 'signup-email-error' : undefined}
+                        />
+                      </div>
+                      {formErrors.email && (
+                        <p id="signup-email-error" className="text-sm text-red-300 mt-1">
+                          {formErrors.email}
+                        </p>
+                      )}
+                    </div>
 
-                <div className="space-y-2.5">
-                  <Label htmlFor="signup-email" className="text-sm font-medium text-gray-200">
-                    Email
-                  </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={signUpData.email}
-                      onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
-                      className={`pl-10 pr-4 h-11 bg-white/10 border-2 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-orange-500/50 ${
-                        formErrors.email
-                          ? 'border-red-400/50 focus:border-red-400'
-                          : ''
-                      }`}
-                      disabled={isSigningIn || isSigningUp}
-                      autoComplete="email"
-                      aria-describedby={formErrors.email ? 'signup-email-error' : undefined}
-                    />
-                  </div>
-                  {formErrors.email && (
-                    <p id="signup-email-error" className="text-sm text-red-300 mt-1">
-                      {formErrors.email}
-                    </p>
-                  )}
-                </div>
+                    <div className="space-y-2.5">
+                      <Label htmlFor="signup-password" className="text-xs font-mono font-bold uppercase text-gray-500">
+                        Password
+                      </Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                        <Input
+                          id="signup-password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="Create a password (min. 8 characters)"
+                          value={signUpData.password}
+                          onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
+                          className={`pl-10 pr-12 h-12 bg-gray-50 border border-gray-300 text-black placeholder:text-gray-400 focus:bg-white focus:border-black focus:ring-0 rounded-none font-mono text-sm transition-all duration-200 hover:border-gray-400 ${formErrors.password
+                            ? 'border-red-500 focus:border-red-500'
+                            : ''
+                            }`}
+                          disabled={isSigningIn || isSigningUp}
+                          autoComplete="new-password"
+                          aria-describedby={formErrors.password ? 'signup-password-error' : undefined}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-9 w-9 p-0 text-gray-400 hover:text-black hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                          disabled={isSigningIn || isSigningUp}
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        </Button>
+                      </div>
+                      {formErrors.password && (
+                        <p id="signup-password-error" className="text-sm text-red-300 mt-1">
+                          {formErrors.password}
+                        </p>
+                      )}
+                    </div>
 
-                <div className="space-y-2.5">
-                  <Label htmlFor="signup-password" className="text-sm font-medium text-gray-200">
-                    Password
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
-                    <Input
-                      id="signup-password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Create a password (min. 8 characters)"
-                      value={signUpData.password}
-                      onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
-                      className={`pl-10 pr-12 h-11 bg-white/10 border-2 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-orange-500/50 ${
-                        formErrors.password
-                          ? 'border-red-400/50 focus:border-red-400'
-                          : ''
-                      }`}
-                      disabled={isSigningIn || isSigningUp}
-                      autoComplete="new-password"
-                      aria-describedby={formErrors.password ? 'signup-password-error' : undefined}
-                    />
+                    <div className="space-y-2.5">
+                      <Label htmlFor="confirm-password" className="text-xs font-mono font-bold uppercase text-gray-500">
+                        Confirm Password
+                      </Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                        <Input
+                          id="confirm-password"
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          placeholder="Confirm your password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className={`pl-10 pr-12 h-12 bg-gray-50 border border-gray-300 text-black placeholder:text-gray-400 focus:bg-white focus:border-black focus:ring-0 rounded-none font-mono text-sm transition-all duration-200 hover:border-gray-400 ${formErrors.confirmPassword
+                            ? 'border-red-500 focus:border-red-500'
+                            : ''
+                            }`}
+                          disabled={isSigningIn || isSigningUp}
+                          autoComplete="new-password"
+                          aria-describedby={formErrors.confirmPassword ? 'confirm-password-error' : undefined}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-9 w-9 p-0 text-gray-400 hover:text-black hover:bg-transparent"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          disabled={isSigningIn || isSigningUp}
+                          aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        </Button>
+                      </div>
+                      {formErrors.confirmPassword && (
+                        <p id="confirm-password-error" className="text-sm text-red-300 mt-1">
+                          {formErrors.confirmPassword}
+                        </p>
+                      )}
+                    </div>
+
                     <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-9 w-9 p-0 text-gray-400 hover:text-white hover:bg-white/10"
-                      onClick={() => setShowPassword(!showPassword)}
-                      disabled={isSigningIn || isSigningUp}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      type="submit"
+                      className="w-full h-12 bg-[#FF4D00] hover:bg-black hover:text-white text-white font-mono font-bold uppercase tracking-widest text-sm rounded-none transition-all duration-300 shadow-sm hover:shadow-md active:transform active:scale-[0.98]"
+                      disabled={isSigningUp}
                     >
-                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      {isSigningUp ? (
+                        <>
+                          <Loader2 className="mr-2 size-4 animate-spin" />
+                          Creating Account...
+                        </>
+                      ) : (
+                        'Create Account'
+                      )}
                     </Button>
-                  </div>
-                  {formErrors.password && (
-                    <p id="signup-password-error" className="text-sm text-red-300 mt-1">
-                      {formErrors.password}
-                    </p>
-                  )}
+                  </form>
                 </div>
-
-                <div className="space-y-2.5">
-                  <Label htmlFor="confirm-password" className="text-sm font-medium text-gray-200">
-                    Confirm Password
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
-                    <Input
-                      id="confirm-password"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      placeholder="Confirm your password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className={`pl-10 pr-12 h-11 bg-white/10 border-2 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-orange-500/50 ${
-                        formErrors.confirmPassword
-                          ? 'border-red-400/50 focus:border-red-400'
-                          : ''
-                      }`}
-                      disabled={isSigningIn || isSigningUp}
-                      autoComplete="new-password"
-                      aria-describedby={formErrors.confirmPassword ? 'confirm-password-error' : undefined}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-9 w-9 p-0 text-gray-400 hover:text-white hover:bg-white/10"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      disabled={isSigningIn || isSigningUp}
-                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </Button>
-                  </div>
-                  {formErrors.confirmPassword && (
-                    <p id="confirm-password-error" className="text-sm text-red-300 mt-1">
-                      {formErrors.confirmPassword}
-                    </p>
-                  )}
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-black font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-200"
-                  disabled={isSigningUp}
-                >
-                  {isSigningUp ? (
-                    <>
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                      Creating Account...
-                    </>
-                  ) : (
-                    'Create Account'
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
+              </TabsContent>
+            </div>
           </Tabs>
         </CardContent>
       </Card>

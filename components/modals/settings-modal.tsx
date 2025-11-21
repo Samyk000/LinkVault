@@ -72,7 +72,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </div>
               <h3 className="text-lg font-semibold mb-2">More Features Coming Soon</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                We&apos;re working on exciting new features to enhance your LinkVault experience. 
+                We&apos;re working on exciting new features to enhance your LinksVault experience.
                 Stay tuned for updates!
               </p>
             </div>

@@ -27,7 +27,7 @@ export function LandingPage(): React.JSX.Element {
           {/* Logo Area */}
           <div className="flex items-center gap-4">
             <div className="w-3 h-3 bg-[#FF4D00]"></div>
-            <span className="font-display font-bold text-xl tracking-tight uppercase">LinkVault<span className="text-[#FF4D00]">.</span></span>
+            <span className="font-display font-bold text-xl tracking-tight uppercase">LinksVault<span className="text-[#FF4D00]">.</span></span>
 
           </div>
 
@@ -73,7 +73,7 @@ export function LandingPage(): React.JSX.Element {
 
               <p className="font-sans text-lg md:text-xl text-gray-600 max-w-lg leading-relaxed border-l-2 border-[#FF4D00] pl-6">
                 Constructing your digital memory through parametric organization.
-                LinkVault captures URLs, extracts metadata, and builds your personal knowledge graph.
+                LinksVault captures URLs, extracts metadata, and builds your personal knowledge graph.
               </p>
             </div>
 
@@ -317,37 +317,15 @@ export function LandingPage(): React.JSX.Element {
       </section>
 
       {/* Footer */}
-      <footer className="bg-white pt-20 pb-10 px-6 border-t border-black">
-        <div className="max-w-[1600px] mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mb-20">
-            <div className="md:col-span-5">
-              <div className="font-display text-3xl font-bold uppercase mb-6">LinkVault.</div>
-              <p className="font-sans text-gray-500 max-w-xs">
-                Designed for the architects of the internet. Organizing the digital void into usable matter.
-              </p>
-            </div>
-
-            <div className="md:col-span-3">
-              <h4 className="font-mono text-xs font-bold uppercase mb-6 text-gray-400">Connect</h4>
-              <div className="flex gap-4">
-                <a href="#" className="w-10 h-10 border border-gray-200 flex items-center justify-center hover:bg-black hover:text-white transition-colors rounded-full">
-                  <Twitter className="w-5 h-5" />
-                </a>
-                <a href="#" className="w-10 h-10 border border-gray-200 flex items-center justify-center hover:bg-black hover:text-white transition-colors rounded-full">
-                  <Github className="w-5 h-5" />
-                </a>
-                <a href="#" className="w-10 h-10 border border-gray-200 flex items-center justify-center hover:bg-black hover:text-white transition-colors rounded-full">
-                  <Disc className="w-5 h-5" />
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row justify-between items-center border-t border-gray-200 pt-8 font-mono text-[10px] uppercase text-gray-400">
-            <span>© 2023 LinkVault Systems Inc.</span>
-            <span className="mt-2 md:mt-0">Designed by Request</span>
-          </div>
+      {/* Footer */}
+      <footer className="bg-white py-20 px-6 border-t border-black flex flex-col items-center justify-center text-center">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-4 h-4 bg-[#FF4D00]"></div>
+          <span className="font-display font-bold text-2xl tracking-tight uppercase">LinksVault<span className="text-[#FF4D00]">.</span></span>
         </div>
+        <p className="font-sans text-gray-500 text-sm">
+          Made for people with too many interests.
+        </p>
       </footer>
     </div>
   );

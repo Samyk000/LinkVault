@@ -25,7 +25,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LinkVault - Your Personal Link Manager",
+  title: "LinksVault - Your Personal Link Manager",
   description: "Save, organize, and rediscover your digital content with LinkVault",
 };
 

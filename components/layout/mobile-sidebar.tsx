@@ -46,18 +46,18 @@ export function MobileSidebar() {
     // Prevent double-click using ref (no React state update)
     if (isLoggingOutRef.current) return;
     isLoggingOutRef.current = true;
-    
+
     // CRITICAL: Set logout flag FIRST to prevent StoreInitializer from loading data
     if (typeof window !== 'undefined') {
       localStorage.setItem('linkvault_logging_out', 'true');
     }
-    
+
     // CRITICAL: Do minimal synchronous cleanup, then redirect IMMEDIATELY
     // Don't set React state - it can block the redirect!
-    
+
     // 1. Clear store data immediately (synchronous)
     clearData();
-    
+
     // 2. Clear cache and localStorage (synchronous operations)
     try {
       globalCache.clear();
@@ -74,21 +74,21 @@ export function MobileSidebar() {
     } catch (cacheError) {
       logger.warn('Error clearing cache:', cacheError);
     }
-    
+
     // 3. Clear performance monitor data (synchronous)
     try {
       performanceMonitor.clearData();
     } catch (perfError) {
       logger.warn('Error clearing performance data:', perfError);
     }
-    
+
     // 4. Unsubscribe from realtime subscriptions (synchronous)
     try {
       supabaseDatabaseService.unsubscribeAll();
     } catch (subError) {
       logger.warn('Error unsubscribing:', subError);
     }
-    
+
     // 5. Clear Supabase session cookies immediately (synchronous)
     try {
       if (typeof document !== 'undefined') {
@@ -106,18 +106,18 @@ export function MobileSidebar() {
     } catch (cookieError) {
       logger.warn('Error clearing cookies:', cookieError);
     }
-    
+
     // 6. Sign out from Supabase (fire and forget - don't wait)
     // This is async but we don't await it
     signOut().catch((error) => {
       logger.error('Sign out error (non-blocking):', error);
     });
-    
+
     // 7. CRITICAL: IMMEDIATE redirect using window.location.replace()
     // This is SYNCHRONOUS and happens IMMEDIATELY - no React, no delays, no state updates
     // Using replace() instead of href prevents browser back button issues
     window.location.replace('/login');
-    
+
     // This code should never execute because redirect happens above
     // But if it does, we have a fallback
     setTimeout(() => {
@@ -157,11 +157,11 @@ export function MobileSidebar() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <span className="text-lg font-bold">L</span>
                 </div>
-                <span className="text-lg font-semibold">LinkVault</span>
+                <span className="text-lg font-semibold">LinksVault</span>
               </div>
             </SheetTitle>
             <SheetDescription className="sr-only">
-              Navigation menu for LinkVault
+              Navigation menu for LinksVault
             </SheetDescription>
           </SheetHeader>
 
@@ -216,7 +216,7 @@ export function MobileSidebar() {
       </Sheet>
 
       {/* Folder Delete Confirmation Modal */}
-      <FolderDeleteModal /> 
+      <FolderDeleteModal />
 
       {/* Profile Modal */}
       <ProfileModal

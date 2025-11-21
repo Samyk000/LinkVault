@@ -18,20 +18,20 @@ export default async function SharedFolderPage({ params }: SharedFolderPageProps
   // Next.js 15 parameter handling
   const { shareId } = await params;
   console.log('ShareFolderPage params:', { params, shareId, shareIdType: typeof shareId });
-  
+
   try {
     const supabase = await createClient();
-    
+
     // Get headers for analytics
     const headersList = await import('next/headers');
     const headers = await headersList.headers();
     const clientIP = headers.get('x-forwarded-for') || headers.get('x-real-ip') || 'unknown';
     const userAgent = headers.get('user-agent') || 'unknown';
     const referrer = headers.get('referer') || null;
-    
+
     // Get share information with folder and links
     console.log('Querying share with ID:', { shareId, shareIdType: typeof shareId, shareIdValue: shareId });
-    
+
     const { data: share, error: shareError } = await supabase
       .from('folder_shares')
       .select(`
@@ -55,7 +55,7 @@ export default async function SharedFolderPage({ params }: SharedFolderPageProps
       `)
       .eq('share_id', shareId.toString())
       .single();
-    
+
     console.log('Share query result:', {
       share,
       shareError,
@@ -63,7 +63,7 @@ export default async function SharedFolderPage({ params }: SharedFolderPageProps
       hasFolders: !!share?.folders,
       queryShareId: shareId.toString()
     });
-    
+
     // Track view analytics (non-blocking)
     try {
       // Track view analytics (fire and forget)
@@ -81,7 +81,7 @@ export default async function SharedFolderPage({ params }: SharedFolderPageProps
     } catch (err) {
       console.warn('Analytics tracking failed:', err);
     }
-    
+
     if (shareError) {
       console.error('Share query detailed error:', {
         shareId: shareId.toString(),
@@ -109,7 +109,7 @@ export default async function SharedFolderPage({ params }: SharedFolderPageProps
     const createdAt = new Date(share.created_at);
     const now = new Date();
     const hoursElapsed = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-    
+
     if (hoursElapsed > 1) {
       logger.warn('Shared folder expired:', {
         shareId,
@@ -117,7 +117,7 @@ export default async function SharedFolderPage({ params }: SharedFolderPageProps
         createdAt: share.created_at,
         expiresAt: new Date(createdAt.getTime() + 60 * 60 * 1000).toISOString()
       });
-      
+
       return (
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="max-w-md w-full mx-auto p-6">
@@ -160,11 +160,11 @@ export default async function SharedFolderPage({ params }: SharedFolderPageProps
                 Shared Folder: {folder.name}
               </h1>
             </div>
-            
+
             {folder.description && (
               <p className="text-muted-foreground mb-4">{folder.description}</p>
             )}
-            
+
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="bg-orange-100 text-orange-800">
                 {links.length} {links.length === 1 ? 'link' : 'links'}
@@ -204,7 +204,7 @@ export default async function SharedFolderPage({ params }: SharedFolderPageProps
                   }}
                   isInTrash={false}
                   isSelected={false}
-                  onToggleSelect={() => {}}
+                  onToggleSelect={() => { }}
                   isSelectionModeActive={false}
                 />
               ))}

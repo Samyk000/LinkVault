@@ -18,7 +18,7 @@ class StorageService {
   getItem<T>(key: string): T | null {
     try {
       if (typeof window === 'undefined') return null;
-      
+
       const item = localStorage.getItem(key);
       return item ? JSON.parse(item) : null;
     } catch (error) {
@@ -36,9 +36,9 @@ class StorageService {
   setItem<T>(key: string, value: T): boolean {
     try {
       if (typeof window === 'undefined') return false;
-      
+
       localStorage.setItem(key, JSON.stringify(value));
-      
+
       // Trigger storage event for cross-tab sync
       window.dispatchEvent(
         new StorageEvent('storage', {
@@ -47,7 +47,7 @@ class StorageService {
           url: window.location.href,
         })
       );
-      
+
       return true;
     } catch (error) {
       console.error(`Error writing to localStorage (key: ${key}):`, error);
@@ -62,7 +62,7 @@ class StorageService {
   removeItem(key: string): void {
     try {
       if (typeof window === 'undefined') return;
-      
+
       localStorage.removeItem(key);
     } catch (error) {
       console.error(`Error removing from localStorage (key: ${key}):`, error);
@@ -75,7 +75,7 @@ class StorageService {
   clear(): void {
     try {
       if (typeof window === 'undefined') return;
-      
+
       localStorage.clear();
     } catch (error) {
       console.error('Error clearing localStorage:', error);
@@ -89,7 +89,7 @@ class StorageService {
   getStorageSize(): number {
     try {
       if (typeof window === 'undefined') return 0;
-      
+
       let total = 0;
       for (const key in localStorage) {
         if (localStorage.hasOwnProperty(key)) {
@@ -115,7 +115,7 @@ class StorageService {
       exportedAt: new Date().toISOString(),
       version: '1.0.0',
     };
-    
+
     return JSON.stringify(data, null, 2);
   }
 
@@ -127,17 +127,17 @@ class StorageService {
   importData(jsonString: string): boolean {
     try {
       const data = JSON.parse(jsonString);
-      
+
       // Validate data structure
       if (!data.links || !data.folders || !data.settings) {
         throw new Error('Invalid data structure');
       }
-      
+
       // Import data
       this.setItem(STORAGE_KEYS.LINKS, data.links);
       this.setItem(STORAGE_KEYS.FOLDERS, data.folders);
       this.setItem(STORAGE_KEYS.SETTINGS, data.settings);
-      
+
       return true;
     } catch (error) {
       console.error('Error importing data:', error);

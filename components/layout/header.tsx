@@ -30,7 +30,7 @@ export function Header() {
               <span className="text-lg font-bold">L</span>
             </div>
             <span className="text-lg font-semibold tracking-tight text-foreground">
-              LinkVault
+              LinksVault
             </span>
           </div>
 

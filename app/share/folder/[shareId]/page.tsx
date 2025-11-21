@@ -52,10 +52,10 @@ async function getSharedFolder(shareId: string): Promise<SharedFolderData | null
 
 // Remove all debug logging from shared page
 const logger = {
-  info: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {}
+  info: () => { },
+  warn: () => { },
+  error: () => { },
+  debug: () => { }
 };
 
 export default function SharedFolderPage({
@@ -183,7 +183,7 @@ export default function SharedFolderPage({
                 <p className="text-xs text-muted-foreground">Your links, beautifully organized</p>
               </div>
             </div>
-            
+
             {/* CTA Buttons - Minimalist */}
             <div className="flex space-x-2">
               <Button
@@ -253,7 +253,7 @@ export default function SharedFolderPage({
                     <ExternalLink className="h-3 w-3 text-white/80" />
                   </div>
                 </div>
-                
+
                 <div className="p-3">
                   <h3 className="font-medium text-foreground line-clamp-2 mb-1 text-sm">
                     {link.title}
@@ -261,7 +261,7 @@ export default function SharedFolderPage({
                   <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                     {link.description}
                   </p>
-                  
+
                   {/* Link Footer */}
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <div className="flex items-center space-x-1">
