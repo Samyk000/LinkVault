@@ -18,17 +18,17 @@ interface FolderTreeSelectProps {
    * Currently selected folder ID
    */
   value: string | null;
-  
+
   /**
    * Callback when selection changes
    */
   onChange: (folderId: string | null) => void;
-  
+
   /**
    * Optional placeholder text
    */
   placeholder?: string;
-  
+
   /**
    * Allow clearing selection
    */
@@ -53,7 +53,7 @@ interface FolderTreeSelectProps {
  *   allowClear
  * />
  */
-export function FolderTreeSelect({
+export function FolderTreeSelectComponent({
   value,
   onChange,
   placeholder = "Select a folder",
@@ -108,7 +108,7 @@ export function FolderTreeSelect({
   const rootFolders = useMemo(() => {
     return getRootFolders(folders);
   }, [folders]);
-  
+
   // Get selected folder for display
   const selectedFolder = useMemo(() => {
     if (!value) return null;
@@ -187,4 +187,6 @@ export function FolderTreeSelect({
     </div>
   );
 }
+
+export const FolderTreeSelect = React.memo(FolderTreeSelectComponent);
 

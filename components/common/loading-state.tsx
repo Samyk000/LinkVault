@@ -60,7 +60,7 @@ export function LoadingState({
         >
             <Loader2
                 className={cn(
-                    'animate-spin text-primary',
+                    'animate-spin-gpu text-primary',
                     sizeClasses[size]
                 )}
             />

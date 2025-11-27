@@ -172,7 +172,7 @@ export function AddLinkModal() {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         const isRestriction = errorData.restriction === true;
         let errorMessage = errorData.error || 'Unable to load link details.';
-        
+
         if (response.status === 403 || isRestriction) {
           errorMessage = 'This website has restrictions preventing metadata fetching. You can still add the link manually by entering the title and description yourself.';
         } else if (response.status === 404) {
@@ -189,7 +189,7 @@ export function AddLinkModal() {
 
         setMetadataError(errorMessage);
         setUrlError(errorMessage);
-        
+
         // Don't clear metadata fields if it's a restriction - user can still use them
         // Only clear if it's a real error (not a restriction)
         if (!isRestriction) {
@@ -200,7 +200,7 @@ export function AddLinkModal() {
       }
     } catch (error: unknown) {
       let errorMessage = 'Failed to fetch link details.';
-      
+
       // Enhanced error handling with more specific messages
       if (error instanceof Error) {
         if (error.name === 'AbortError' || error.message.includes('timeout')) {
@@ -217,7 +217,7 @@ export function AddLinkModal() {
       logger.error("Failed to fetch metadata:", error);
       setMetadataError(errorMessage);
       setUrlError(errorMessage);
-      
+
       // Clear metadata fields on error (but preserve if it's a retry)
       if (!isRetry) {
         setValue("title", "");
@@ -228,6 +228,19 @@ export function AddLinkModal() {
       setIsFetchingMetadata(false);
     }
   }, [setValue, browserInfo.isMobile]);
+
+  // Safety effect to prevent stuck metadata loading state
+  useEffect(() => {
+    if (isFetchingMetadata) {
+      const safetyTimer = setTimeout(() => {
+        if (isFetchingMetadata) {
+          logger.warn('Force clearing stuck metadata loading state');
+          setIsFetchingMetadata(false);
+        }
+      }, 8000); // 8s safety timeout (reduced from 12s)
+      return () => clearTimeout(safetyTimer);
+    }
+  }, [isFetchingMetadata]);
 
   /**
    * Handle retry button click
@@ -261,7 +274,7 @@ export function AddLinkModal() {
     // Enhanced debounce logic for better first-time performance
     const baseDebounceDelay = 400; // Reduced from 800ms for faster response
     const adaptiveDelay = browserInfo.isMobile ? baseDebounceDelay * 2 : baseDebounceDelay;
-    
+
     // Add slight randomness to prevent multiple tabs from hitting API simultaneously
     const finalDelay = adaptiveDelay + (Math.random() * 100);
 
@@ -350,8 +363,8 @@ export function AddLinkModal() {
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{isEditMode ? 'Edit Link' : 'Add New Link'}</DialogTitle>
           <DialogDescription>
-            {isEditMode 
-              ? 'Update your link information below.' 
+            {isEditMode
+              ? 'Update your link information below.'
               : "Paste a URL and we'll automatically fetch the metadata."
             }
           </DialogDescription>
@@ -370,7 +383,7 @@ export function AddLinkModal() {
                   {/* Loading indicator for metadata fetch */}
                   {isFetchingMetadata && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin-gpu" />
                       <span>Getting link details...</span>
                     </div>
                   )}
@@ -467,7 +480,7 @@ export function AddLinkModal() {
             <div>
               <FolderTreeSelect
                 value={watch("folderId") || null}
-                onChange={(folderId) => setValue("folderId", folderId)}
+                onChange={useCallback((folderId: string | null) => setValue("folderId", folderId), [setValue])}
                 placeholder="Optional: Select a folder to organize this link"
                 allowClear
               />
@@ -482,7 +495,7 @@ export function AddLinkModal() {
             <Button type="submit" disabled={isSubmitting || isFetchingMetadata} className="h-10 px-6">
               {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  <Loader2 className="mr-2 size-4 animate-spin-gpu" />
                   {isEditMode ? 'Updating...' : 'Saving...'}
                 </>
               ) : (

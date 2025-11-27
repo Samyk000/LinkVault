@@ -26,9 +26,8 @@ export function LandingPage(): React.JSX.Element {
         <div className="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between">
           {/* Logo Area */}
           <div className="flex items-center gap-4">
-            <div className="w-3 h-3 bg-[#FF4D00]"></div>
-            <span className="font-display font-bold text-xl tracking-tight uppercase">LinksVault<span className="text-[#FF4D00]">.</span></span>
-
+            <div className="w-4 h-4 bg-[#FF4D00]"></div>
+            <span className="font-display font-bold text-2xl tracking-tight uppercase">LinksVault<span className="text-[#FF4D00]">.</span></span>
           </div>
 
           {/* Center Links (Hidden on Mobile) */}
@@ -239,7 +238,10 @@ export function LandingPage(): React.JSX.Element {
               </div>
             </div>
             <div className="relative z-10 mt-6 md:mt-0">
-              <button className="bg-white text-[#FF4D00] px-6 py-3 font-mono text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors">
+              <button
+                onClick={() => router.push('/login')}
+                className="bg-white text-[#FF4D00] px-6 py-3 font-mono text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors"
+              >
                 Start Organizing
               </button>
             </div>

@@ -126,7 +126,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       });
 
       // ENHANCED: Add timeout protection with mobile-specific duration and retry logic
-      const timeoutDuration = browserInfo.isMobile ? 12000 : 8000; // Reduced timeout for better UX (8s desktop, 12s mobile)
+      const timeoutDuration = browserInfo.isMobile ? 8000 : 5000; // Reduced timeout for better UX (5s desktop, 8s mobile)
       const maxRetries = 1; // Reduce retries to 1 to fail faster
       let lastError: Error | null = null;
 

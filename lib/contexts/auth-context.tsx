@@ -241,8 +241,14 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
           if (mounted) {
             setUser(user);
 
-            // Set up periodic session validation (every 2 minutes instead of 30 seconds)
+            // Set up periodic session validation (every 2 minutes)
+            // Only validate if we have a user
             sessionCheckInterval = setInterval(async () => {
+              // Check if we have a current user before validating session
+              // This prevents spurious "session expired" toasts on public pages
+              const currentUser = await authService.getCurrentUser();
+              if (!currentUser) return;
+
               const isValid = await validateSession();
               if (!isValid && mounted) {
                 logger.warn('Session expired, redirecting to login');

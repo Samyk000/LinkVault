@@ -52,6 +52,7 @@ export function LoginForm(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [signInError, setSignInError] = useState<string | null>(null);
 
   // Handle URL tab parameter
   useEffect(() => {
@@ -214,7 +215,7 @@ export function LoginForm(): React.JSX.Element {
   };
 
   /**
-   * Handles sign in form submission with retry logic and better error handling
+   * Handles sign in form submission with immediate redirect
    * @param {React.FormEvent} e - Form event
    */
   const handleSignIn = async (e: React.FormEvent): Promise<void> => {
@@ -241,60 +242,11 @@ export function LoginForm(): React.JSX.Element {
       const { error } = await signIn(signInData);
 
       if (!error) {
-        // Verify session with retry logic (max 2 retries)
-        const supabaseClient = createClient();
-        let sessionVerified = false;
-        let lastError: any = null;
-
-        for (let attempt = 0; attempt < AUTH_CONSTANTS.MAX_RETRIES; attempt++) {
-          try {
-            const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-
-            if (!sessionError && session) {
-              sessionVerified = true;
-              break;
-            }
-
-            lastError = sessionError;
-
-            // Wait before retry
-            if (attempt < AUTH_CONSTANTS.MAX_RETRIES - 1) {
-              await new Promise(resolve => setTimeout(resolve, AUTH_CONSTANTS.RETRY_DELAY));
-            }
-          } catch (err) {
-            lastError = err;
-            if (attempt < AUTH_CONSTANTS.MAX_RETRIES - 1) {
-              await new Promise(resolve => setTimeout(resolve, AUTH_CONSTANTS.RETRY_DELAY));
-            }
-          }
-        }
-
-        if (!sessionVerified) {
-          logger.error('Session verification failed after retries:', lastError);
-          setFormErrors({
-            general: AUTH_ERROR_MESSAGES.SESSION_NOT_ESTABLISHED,
-          });
-          setIsSigningIn(false);
-          return;
-        }
-
-        // Clear form ONLY after session is confirmed
+        // Clear form after successful sign in
         setSignInData({ email: '', password: '' });
 
-        // Show success toast before navigation
-        toast({
-          title: "Success",
-          description: "Redirecting to your vault...",
-          variant: "default",
-        });
-
-        // CRITICAL FIX: Clear loading state BEFORE navigation to prevent stuck spinner
-        setIsSigningIn(false);
-
-        // Use Next.js router for smooth client-side navigation
-        // This allows the loading state to properly update
+        // Redirect immediately - the AuthProvider will handle session setup
         router.push('/app');
-
       } else {
         // Enhanced error messages
         let errorMessage = error.message || AUTH_ERROR_MESSAGES.UNEXPECTED_ERROR;
@@ -501,8 +453,8 @@ export function LoginForm(): React.JSX.Element {
                     >
                       {isSigningIn ? (
                         <>
-                          <Loader2 className="mr-2 size-4 animate-spin" />
-                          Authenticating...
+                          <Loader2 className="mr-2 size-4 animate-spin-gpu" />
+                          Logging in...
                         </>
                       ) : (
                         'Initialize Session'
@@ -656,7 +608,7 @@ export function LoginForm(): React.JSX.Element {
                     >
                       {isSigningUp ? (
                         <>
-                          <Loader2 className="mr-2 size-4 animate-spin" />
+                          <Loader2 className="mr-2 size-4 animate-spin-gpu" />
                           Creating Account...
                         </>
                       ) : (

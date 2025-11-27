@@ -35,91 +35,79 @@ export function Sidebar() {
 
   /**
    * Handle user logout with instant cleanup and secure session clearing
-   * CRITICAL: Must redirect IMMEDIATELY on first click - no delays, no React state blocking
    */
-  const handleLogout = () => {
-    // Prevent double-click using ref (no React state update)
+  const handleLogout = async () => {
+    // Prevent double-click
     if (isLoggingOutRef.current) return;
     isLoggingOutRef.current = true;
-    
-    // CRITICAL: Set logout flag FIRST to prevent StoreInitializer from loading data
+
+    // 1. Show button spinner
+    setIsLoggingOut(true);
+
+    // 2. Small delay to ensure spinner renders
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // CRITICAL: Set logout flag
     if (typeof window !== 'undefined') {
       localStorage.setItem('linkvault_logging_out', 'true');
     }
-    
-    // CRITICAL: Do minimal synchronous cleanup, then redirect IMMEDIATELY
-    // Don't set React state - it can block the redirect!
-    
-    // 1. Clear store data immediately (synchronous)
-    clearData();
-    
-    // 2. Clear cache and localStorage (synchronous operations)
+
+    // 3. Clear cache and localStorage (synchronous)
+    // NOTE: We do NOT call clearData() here to prevent the UI from flashing "empty"
+    // before the redirect. The hard navigation will clear memory anyway.
     try {
       globalCache.clear();
       if (typeof window !== 'undefined') {
-        // Clear all localStorage keys that might contain user data
         Object.keys(localStorage).forEach(key => {
           if (key.startsWith('linkvault_') || key.startsWith('supabase.')) {
             localStorage.removeItem(key);
           }
         });
-        // Clear logout flag after clearing
         localStorage.removeItem('linkvault_logging_out');
       }
-    } catch (cacheError) {
-      logger.warn('Error clearing cache:', cacheError);
+    } catch (error) {
+      console.error('Error clearing cache:', error);
     }
-    
-    // 3. Clear performance monitor data (synchronous)
+
+    // 4. Clear performance monitor
     try {
       performanceMonitor.clearData();
-    } catch (perfError) {
-      logger.warn('Error clearing performance data:', perfError);
+    } catch (error) {
+      console.error('Error clearing performance data:', error);
     }
-    
-    // 4. Unsubscribe from realtime subscriptions (synchronous)
+
+    // 5. Unsubscribe from realtime
     try {
       supabaseDatabaseService.unsubscribeAll();
-    } catch (subError) {
-      logger.warn('Error unsubscribing:', subError);
+    } catch (error) {
+      console.error('Error unsubscribing:', error);
     }
-    
-    // 5. Clear Supabase session cookies immediately (synchronous)
+
+    // 6. Clear cookies
     try {
       if (typeof document !== 'undefined') {
         const cookies = document.cookie.split(';');
         cookies.forEach(cookie => {
           const eqPos = cookie.indexOf('=');
           const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-          // Clear Supabase auth cookies
           if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth-token')) {
             document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
             document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
           }
         });
       }
-    } catch (cookieError) {
-      logger.warn('Error clearing cookies:', cookieError);
+    } catch (error) {
+      console.error('Error clearing cookies:', error);
     }
-    
-    // 6. Sign out from Supabase (fire and forget - don't wait)
-    // This is async but we don't await it
-    signOut().catch((error) => {
-      logger.error('Sign out error (non-blocking):', error);
-    });
-    
-    // 7. CRITICAL: IMMEDIATE redirect using window.location.replace()
-    // This is SYNCHRONOUS and happens IMMEDIATELY - no React, no delays, no state updates
-    // Using replace() instead of href prevents browser back button issues
+
+    // 7. Sign out from Supabase (non-blocking)
+    signOut().catch(console.error);
+
+    // 8. Small delay to ensure spinner is visible before redirect
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // 9. Redirect immediately
     window.location.replace('/login');
-    
-    // This code should never execute because redirect happens above
-    // But if it does, we have a fallback
-    setTimeout(() => {
-      if (window.location.pathname !== '/login') {
-        window.location.replace('/login');
-      }
-    }, 50);
   };
 
   return (
@@ -158,12 +146,10 @@ export function Sidebar() {
               size="icon"
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="h-10 w-10 p-2 hover:bg-destructive/10 text-destructive hover:text-destructive/90 disabled:opacity-50 rounded-lg transition-colors"
-              title="Logout"
-              aria-label="Logout"
+              className="text-muted-foreground hover:text-foreground transition-colors"
             >
               {isLoggingOut ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin-gpu" />
               ) : (
                 <LogOut className="size-4" />
               )}

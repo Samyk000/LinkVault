@@ -48,7 +48,7 @@ export function ShareFolderModal({ isOpen, onClose, folder }: ShareFolderModalPr
     if (!effectiveFolder || isGenerating || shareUrl) return;
 
     setIsGenerating(true);
-    
+
     try {
       const response = await fetch(`/api/folders/${effectiveFolder.id}/share`, {
         method: 'POST',
@@ -64,7 +64,7 @@ export function ShareFolderModal({ isOpen, onClose, folder }: ShareFolderModalPr
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         setShareUrl(data.shareUrl);
         toast({
@@ -108,7 +108,7 @@ export function ShareFolderModal({ isOpen, onClose, folder }: ShareFolderModalPr
       await navigator.clipboard.writeText(shareUrl);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
-      
+
       toast({
         title: "Link copied",
         description: "Share link copied to clipboard.",
@@ -163,7 +163,7 @@ export function ShareFolderModal({ isOpen, onClose, folder }: ShareFolderModalPr
               </div>
               {isGenerating && (
                 <div className="flex items-center justify-center sm:justify-start">
-                  <div className="animate-spin rounded-full border-2 border-orange-500 border-t-transparent h-4 w-4" />
+                  <div className="animate-spin-gpu rounded-full border-2 border-orange-500 border-t-transparent h-4 w-4" />
                 </div>
               )}
               <div className="sm:min-w-[80px]">

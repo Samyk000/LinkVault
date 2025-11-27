@@ -59,7 +59,7 @@ export function CreateFolderModal() {
   const isEditMode = !!editingFolder;
   const isSubFolder = !!parentFolderId;
   const parentFolder = parentFolderId ? folders.find(f => f.id === parentFolderId) : null;
-  
+
   // Check if parent folder has reached the sub-folder limit
   const canAddMoreSubFolders = parentFolderId ? canAddSubFolder(parentFolderId, folders) : true;
   const currentSubFolderCount = parentFolderId ? getSubFolderCount(parentFolderId, folders) : 0;
@@ -123,7 +123,7 @@ export function CreateFolderModal() {
           });
           return;
         }
-        
+
         // Validate sub-folder limit (now 10)
         if (!canAddSubFolder(parentFolderId, folders)) {
           const count = getSubFolderCount(parentFolderId, folders);
@@ -153,7 +153,7 @@ export function CreateFolderModal() {
           variant: "success",
           icon: <Folder className="size-4" />,
         });
-        
+
         handleClose();
       } else {
         // Create new folder or sub-folder
@@ -171,19 +171,19 @@ export function CreateFolderModal() {
           variant: "success",
           icon: isSubFolder ? <FolderPlus className="size-4" /> : <Folder className="size-4" />,
         });
-        
+
         handleClose();
       }
     } catch (error) {
       logger.error('Error saving folder:', error);
-      
+
       // OPTIMIZED: Handle duplicate folder name error
       const isDuplicate = error instanceof Error && (
         error.message?.includes('already exists') ||
         error.message?.includes('duplicate') ||
         error.message?.includes('unique')
       );
-      
+
       toast({
         title: isDuplicate ? "Duplicate folder" : "Error",
         description: isDuplicate ? "A folder with this name already exists" : "Please try again",
@@ -209,7 +209,7 @@ export function CreateFolderModal() {
             {isEditMode ? 'Edit Folder' : isSubFolder ? `Create Sub-folder ${parentFolder ? `under "${parentFolder.name}"` : ''}` : 'Create Folder'}
           </DialogTitle>
           <DialogDescription>
-            {isEditMode 
+            {isEditMode
               ? 'Update your folder name and icon.'
               : 'Choose an icon and name for your folder.'}
           </DialogDescription>
@@ -223,7 +223,7 @@ export function CreateFolderModal() {
               <div className="flex-1 text-sm">
                 <p className="font-medium text-destructive">Maximum sub-folders reached</p>
                 <p className="text-xs text-destructive/80 mt-1">
-                  &quot;{parentFolder?.name}&quot; already has {currentSubFolderCount} sub-folders. 
+                  &quot;{parentFolder?.name}&quot; already has {currentSubFolderCount} sub-folders.
                   Maximum is {MAX_SUB_FOLDERS_PER_FOLDER} sub-folders per folder.
                 </p>
               </div>
@@ -251,7 +251,7 @@ export function CreateFolderModal() {
           {/* Icon Selector */}
           <div className="flex-1 min-h-0 flex flex-col gap-2.5">
             <Label className="text-sm font-medium">Select Icon</Label>
-            
+
             <div className="grid grid-cols-8 gap-1.5">
               {FOLDER_ICONS.map((iconOption) => {
                 const IconComponent = iconOption.icon;
@@ -261,15 +261,14 @@ export function CreateFolderModal() {
                     key={iconOption.name}
                     type="button"
                     onClick={() => setValue("iconName", iconOption.name)}
-                    className={`aspect-square p-2 rounded-md border-2 transition-all duration-250 ease-in-out hover:scale-105 active:scale-95 flex items-center justify-center will-change-transform ${
-                      isSelected
+                    className={`aspect-square p-2 rounded-md border-2 transition-all duration-250 ease-in-out hover:scale-105 active:scale-95 flex items-center justify-center will-change-transform ${isSelected
                         ? "border-primary bg-primary/10 scale-105"
                         : "border-border hover:border-primary/50"
-                    }`}
+                      }`}
                     title={iconOption.name}
                   >
-                    <IconComponent 
-                      className="size-4" 
+                    <IconComponent
+                      className="size-4"
                       style={{ color: iconOption.color }}
                     />
                   </button>
@@ -285,7 +284,7 @@ export function CreateFolderModal() {
             <Button type="submit" disabled={isSubmitting || hasReachedLimit} className="h-10 px-6">
               {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  <Loader2 className="mr-2 size-4 animate-spin-gpu" />
                   {isEditMode ? 'Updating...' : 'Creating...'}
                 </>
               ) : (

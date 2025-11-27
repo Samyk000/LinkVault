@@ -43,6 +43,7 @@ interface LinkCardProps {
   onToggleSelect?: (linkId: string) => void;
   isSelectionModeActive?: boolean;
   priority?: boolean; // For LCP optimization - prioritize above-the-fold images
+  showActions?: boolean; // Whether to show interactive actions (edit, delete, favorite)
 }
 
 /**
@@ -52,8 +53,17 @@ interface LinkCardProps {
  * 
  * @param link - Link object to display
  * @param isInTrash - Whether the link is in trash view
+ * @param showActions - Whether to show actions (default: true)
  */
-function LinkCardComponent({ link, isInTrash = false, isSelected = false, onToggleSelect, isSelectionModeActive = false, priority = false }: LinkCardProps) {
+function LinkCardComponent({
+  link,
+  isInTrash = false,
+  isSelected = false,
+  onToggleSelect,
+  isSelectionModeActive = false,
+  priority = false,
+  showActions = true
+}: LinkCardProps) {
   const { updateLink, deleteLink, restoreLink, permanentlyDeleteLink } = useLinksStore();
   const { setEditingLink, setAddLinkModalOpen } = useUIStore();
   const [imageError, setImageError] = useState(false);
@@ -76,6 +86,7 @@ function LinkCardComponent({ link, isInTrash = false, isSelected = false, onTogg
    * Opens edit modal with current link data
    */
   const handleEdit = (e: React.MouseEvent) => {
+    if (!showActions) return;
     e.stopPropagation();
 
     trackInteraction('click', 'edit_button', {
@@ -92,6 +103,7 @@ function LinkCardComponent({ link, isInTrash = false, isSelected = false, onTogg
    * Toggles favorite status of the link
    */
   const handleToggleFavorite = async (e: React.MouseEvent) => {
+    if (!showActions) return;
     e.stopPropagation();
 
     const wasFavorite = link.isFavorite;
@@ -129,6 +141,7 @@ function LinkCardComponent({ link, isInTrash = false, isSelected = false, onTogg
         title: "Error",
         description: "Please try again",
         variant: "destructive",
+        icon: <LucideIcons.AlertCircle className="size-4" />,
       });
     }
   };
@@ -137,6 +150,7 @@ function LinkCardComponent({ link, isInTrash = false, isSelected = false, onTogg
    * Soft deletes link (moves to trash)
    */
   const handleDelete = (e: React.MouseEvent) => {
+    if (!showActions) return;
     e.stopPropagation();
 
     const startTime = performance.now();
@@ -185,6 +199,7 @@ function LinkCardComponent({ link, isInTrash = false, isSelected = false, onTogg
    * Restores link from trash
    */
   const handleRestore = (e: React.MouseEvent) => {
+    if (!showActions) return;
     e.stopPropagation();
     restoreLink(link.id);
     toast({
@@ -235,6 +250,7 @@ function LinkCardComponent({ link, isInTrash = false, isSelected = false, onTogg
    * Handles selection toggle
    */
   const handleSelect = (e: React.MouseEvent) => {
+    if (!showActions) return;
     e.stopPropagation();
 
     trackInteraction('click', 'select_toggle', {
@@ -289,7 +305,7 @@ function LinkCardComponent({ link, isInTrash = false, isSelected = false, onTogg
     }
 
     // If in selection mode, toggle selection instead of opening link
-    if (isSelectionModeActive && onToggleSelect) {
+    if (isSelectionModeActive && onToggleSelect && showActions) {
       trackInteraction('click', 'card_select', {
         linkId: link.id,
         isSelected: !isSelected
@@ -331,6 +347,7 @@ function LinkCardComponent({ link, isInTrash = false, isSelected = false, onTogg
    * Permanently deletes link with confirmation
    */
   const handlePermanentDelete = (e: React.MouseEvent) => {
+    if (!showActions) return;
     e.stopPropagation();
     setShowDeleteConfirm(true);
   };
@@ -357,66 +374,68 @@ function LinkCardComponent({ link, isInTrash = false, isSelected = false, onTogg
         onClick={handleCardClick}
       >
         {/* Three-Dot Menu - Top Right Corner */}
-        <div className="absolute top-2 right-2 z-10">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                aria-label="Link options"
-              >
-                <MoreVertical className="size-4" />
-                <span className="sr-only">Open menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {isInTrash ? (
-                <>
-                  <DropdownMenuItem onClick={handleRestore}>
-                    <RotateCcw className="mr-2 size-4" />
-                    Restore
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={handlePermanentDelete}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash className="mr-2 size-4" />
-                    Delete Permanently
-                  </DropdownMenuItem>
-                </>
-              ) : (
-                <>
-                  <DropdownMenuItem onClick={handleSelect}>
-                    <CheckSquare className="mr-2 size-4" />
-                    Select
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleEdit}>
-                    <Edit className="mr-2 size-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleCopyLink} className="md:hidden">
-                    <Copy className="mr-2 size-4" />
-                    Copy
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleToggleFavorite} className="md:hidden">
-                    <Star className={`mr-2 size-4 ${link.isFavorite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-                    {link.isFavorite ? 'Unfavorite' : 'Favorite'}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={handleDelete}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash className="mr-2 size-4" />
-                    Trash
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        {showActions && (
+          <div className="absolute top-2 right-2 z-10">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                  aria-label="Link options"
+                >
+                  <MoreVertical className="size-4" />
+                  <span className="sr-only">Open menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isInTrash ? (
+                  <>
+                    <DropdownMenuItem onClick={handleRestore}>
+                      <RotateCcw className="mr-2 size-4" />
+                      Restore
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handlePermanentDelete}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash className="mr-2 size-4" />
+                      Delete Permanently
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={handleSelect}>
+                      <CheckSquare className="mr-2 size-4" />
+                      Select
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleEdit}>
+                      <Edit className="mr-2 size-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleCopyLink} className="md:hidden">
+                      <Copy className="mr-2 size-4" />
+                      Copy
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleToggleFavorite} className="md:hidden">
+                      <Star className={`mr-2 size-4 ${link.isFavorite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                      {link.isFavorite ? 'Unfavorite' : 'Favorite'}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleDelete}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash className="mr-2 size-4" />
+                      Trash
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
 
         {/* Thumbnail */}
         <div className="relative h-28 sm:h-32 w-full overflow-hidden bg-muted/50 rounded-t-xl">
@@ -448,7 +467,7 @@ function LinkCardComponent({ link, isInTrash = false, isSelected = false, onTogg
           )}
 
           {/* Favorite star - Top-left corner (visible when favorited or on hover) */}
-          {!isInTrash && (
+          {!isInTrash && showActions && (
             <div className={`absolute top-2.5 left-2.5 z-10 transition-all duration-200 ${link.isFavorite ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
               }`}>
               <Button
@@ -500,7 +519,7 @@ function LinkCardComponent({ link, isInTrash = false, isSelected = false, onTogg
                 {formatRelativeTime(link.createdAt)}
               </span>
               {/* Copy icon - Desktop only */}
-              {!isInTrash && (
+              {!isInTrash && showActions && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -542,6 +561,7 @@ export const LinkCard = React.memo(LinkCardComponent, (prevProps, nextProps) => 
     prevProps.isInTrash === nextProps.isInTrash &&
     prevProps.isSelectionModeActive === nextProps.isSelectionModeActive &&
     prevProps.priority === nextProps.priority &&
-    prevProps.onToggleSelect === nextProps.onToggleSelect
+    prevProps.onToggleSelect === nextProps.onToggleSelect &&
+    prevProps.showActions === nextProps.showActions
   );
 });

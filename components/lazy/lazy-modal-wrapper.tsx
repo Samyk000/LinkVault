@@ -23,7 +23,7 @@ function ModalLoadingFallback() {
   return (
     <DialogContent className="sm:max-w-[425px]">
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        <Loader2 className="size-8 animate-spin-gpu text-muted-foreground" />
         <span className="ml-2 text-sm text-muted-foreground">Loading...</span>
       </div>
     </DialogContent>
@@ -38,11 +38,11 @@ function ModalLoadingFallback() {
  * @param className - Additional CSS classes
  * @returns {JSX.Element} Modal wrapper with loading state
  */
-export function LazyModalWrapper({ 
-  isOpen, 
-  onClose, 
-  children, 
-  className 
+export function LazyModalWrapper({
+  isOpen,
+  onClose,
+  children,
+  className
 }: LazyModalWrapperProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
