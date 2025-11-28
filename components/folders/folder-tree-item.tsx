@@ -19,47 +19,47 @@ interface FolderTreeItemProps {
    * Folder to display
    */
   folder: Folder;
-  
+
   /**
    * All folders for finding children
    */
   allFolders: Folder[];
-  
+
   /**
    * Currently selected folder ID
    */
   selectedId: string | null;
-  
+
   /**
    * Callback when folder is selected
    */
   onSelect: (folderId: string) => void;
-  
+
   /**
    * Current nesting depth (0 = root)
    */
   depth?: number;
-  
+
   /**
    * Maximum allowed depth for display
    */
   maxDepth?: number;
-  
+
   /**
    * Set of expanded folder IDs
    */
   expandedIds: Set<string>;
-  
+
   /**
    * Toggle expand/collapse state
    */
   onToggleExpand: (folderId: string) => void;
-  
+
   /**
    * Callback when folder edit is requested
    */
   onEdit?: (folderId: string) => void;
-  
+
   /**
    * Callback when folder delete is requested
    */
@@ -104,17 +104,17 @@ export function FolderTreeItem({
   const hasChildren = children.length > 0;
   const isExpanded = expandedIds.has(folder.id);
   const isSelected = selectedId === folder.id;
-  
+
   // Calculate indentation (20px per level, max 100px)
   const indentPx = Math.min(depth * 20, 100);
-  
+
   // Font size scaling (smaller for deeper levels)
   const fontSize = depth >= 2 ? 'text-xs' : 'text-xs';
-  
+
   // Get folder icon
   const folderIconConfig = FOLDER_ICONS.find((icon) => icon.name === folder.icon);
   const FolderIcon = folderIconConfig?.icon;
-  
+
   // Get sub-folder count for display
   const subFolderCount = getSubFolderCount(folder.id, allFolders);
 
@@ -140,9 +140,8 @@ export function FolderTreeItem({
     <div className="folder-tree-item">
       {/* Folder Row */}
       <div
-        className={`flex items-center gap-0.5 py-1 px-1.5 hover:bg-accent rounded transition-colors ${
-          isSelected ? 'bg-accent' : ''
-        }`}
+        className={`group/folder flex items-center gap-0.5 py-1 px-1.5 hover:bg-accent/30 rounded transition-colors ${isSelected ? 'bg-accent/50' : ''
+          }`}
         style={{ paddingLeft: `${indentPx + 6}px` }}
       >
         {/* Expand/Collapse Button */}
@@ -169,7 +168,7 @@ export function FolderTreeItem({
         {/* Folder Button */}
         <button
           onClick={handleSelect}
-          className={`flex items-center gap-1.5 flex-1 min-w-0 py-0.5 px-1.5 rounded transition-colors hover:bg-accent/50 ${fontSize}`}
+          className={`flex items-center gap-1.5 flex-1 min-w-0 py-0.5 px-1.5 rounded transition-colors ${fontSize}`}
           aria-label={`Select ${folder.name} folder`}
           aria-pressed={isSelected}
         >

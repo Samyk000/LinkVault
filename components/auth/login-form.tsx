@@ -349,7 +349,7 @@ export function LoginForm(): React.JSX.Element {
 
   return (
     <>
-      <Card className="w-full max-w-md mx-auto border border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-none min-h-[600px] transition-all duration-300">
+      <Card className="w-full max-w-md mx-auto border border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-none transition-all duration-300">
         <CardHeader className="text-center pb-6 border-b border-gray-100">
           <CardTitle className="text-2xl sm:text-3xl font-display font-bold text-black mb-2 uppercase tracking-tight">
             {activeTab === 'signin' ? 'Welcome Back' : 'Create Account'}
@@ -359,7 +359,7 @@ export function LoginForm(): React.JSX.Element {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="px-6 sm:px-8 pb-8">
+        <CardContent className="px-6 sm:px-8 pb-6">
           {error && (
             <Alert className="mb-5 border-2 border-red-500/50 bg-red-500/10 backdrop-blur-sm">
               <AlertCircle className="size-4 text-red-400" />
@@ -375,7 +375,7 @@ export function LoginForm(): React.JSX.Element {
               <TabsTrigger value="signup" className="text-xs font-mono font-bold uppercase data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-black rounded-none transition-all">Sign Up</TabsTrigger>
             </TabsList>
 
-            <div className="relative overflow-hidden min-h-[400px]">
+            <div className="relative overflow-hidden">
               <TabsContent value="signin" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                 <div key="signin" className="animate-in fade-in slide-in-from-right-8 duration-500 ease-out fill-mode-both">
                   <form onSubmit={handleSignIn} className="space-y-5">

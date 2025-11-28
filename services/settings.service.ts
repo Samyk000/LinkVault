@@ -27,19 +27,19 @@ export const settingsService = {
     if (!userId) {
       throw new Error('No authenticated user found');
     }
-    
+
     const { data, error } = await supabase
       .from('user_settings')
       .select('*')
       .eq('user_id', userId)
       .single();
-    
+
     if (error) {
       if (error.code === 'PGRST116') {
         // No rows returned - settings not found, return default
         return null;
       }
-      
+
       logger.error('Failed to fetch user settings:', {
         error: error.message,
         userId,
@@ -47,10 +47,10 @@ export const settingsService = {
       });
       throw new Error(`Failed to fetch settings: ${error.message}`);
     }
-    
+
     return data as AppSettings;
   },
-  
+
   /**
    * Updates user settings in the database
    * @param {Partial<AppSettings>} updates - Settings to update
@@ -59,12 +59,12 @@ export const settingsService = {
    */
   async updateSettings(updates: Partial<AppSettings>): Promise<AppSettings> {
     const sanitizedUpdates = sanitizeSettingsData(updates);
-    
+
     const userId = (await supabase.auth.getUser()).data.user?.id;
     if (!userId) {
       throw new Error('No authenticated user found');
     }
-    
+
     // Use upsert to either insert new settings or update existing ones
     const { data, error } = await supabase
       .from('user_settings')
@@ -75,7 +75,7 @@ export const settingsService = {
       })
       .select()
       .single();
-    
+
     if (error) {
       logger.error('Failed to update user settings:', {
         error: error.message,
@@ -85,15 +85,15 @@ export const settingsService = {
       });
       throw new Error(`Failed to update settings: ${error.message}`);
     }
-    
+
     if (!data) {
       throw new Error('No data returned when updating settings');
     }
-    
+
     logger.debug('User settings updated successfully:', { userId, updates: sanitizedUpdates });
     return data as AppSettings;
   },
-  
+
   /**
    * Creates default settings for a new user
    * @param {string} userId - User ID
@@ -103,10 +103,9 @@ export const settingsService = {
   async createDefaultSettings(userId: string): Promise<AppSettings> {
     const defaultSettings: AppSettings = {
       theme: 'system',
-      viewMode: 'grid',
       // Add other default settings as needed
     };
-    
+
     const { data, error } = await supabase
       .from('user_settings')
       .insert({
@@ -117,7 +116,7 @@ export const settingsService = {
       })
       .select()
       .single();
-    
+
     if (error) {
       logger.error('Failed to create default settings:', {
         error: error.message,
@@ -126,15 +125,15 @@ export const settingsService = {
       });
       throw new Error(`Failed to create default settings: ${error.message}`);
     }
-    
+
     if (!data) {
       throw new Error('No data returned when creating default settings');
     }
-    
+
     logger.info('Default settings created for new user:', { userId });
     return data as AppSettings;
   },
-  
+
   /**
    * Deletes user settings (useful for account cleanup)
    * @returns {Promise<void>}
@@ -145,12 +144,12 @@ export const settingsService = {
     if (!userId) {
       throw new Error('No authenticated user found');
     }
-    
+
     const { error } = await supabase
       .from('user_settings')
       .delete()
       .eq('user_id', userId);
-    
+
     if (error) {
       logger.error('Failed to delete user settings:', {
         error: error.message,
@@ -159,10 +158,10 @@ export const settingsService = {
       });
       throw new Error(`Failed to delete settings: ${error.message}`);
     }
-    
+
     logger.debug('User settings deleted successfully:', { userId });
   },
-  
+
   /**
    * Gets settings for a specific user (admin function)
    * @param {string} userId - User ID to fetch settings for
@@ -175,13 +174,13 @@ export const settingsService = {
       .select('*')
       .eq('user_id', userId)
       .single();
-    
+
     if (error) {
       if (error.code === 'PGRST116') {
         // No rows returned - settings not found
         return null;
       }
-      
+
       logger.error('Failed to fetch settings for user:', {
         error: error.message,
         targetUserId: userId,
@@ -189,10 +188,10 @@ export const settingsService = {
       });
       throw new Error(`Failed to fetch settings for user: ${error.message}`);
     }
-    
+
     return data as AppSettings;
   },
-  
+
   /**
    * Gets all user settings (admin function - should have proper authorization)
    * @param {Object} options - Query options
@@ -209,17 +208,17 @@ export const settingsService = {
       .from('user_settings')
       .select('*')
       .order('updated_at', { ascending: false });
-    
+
     if (options.limit) {
       query = query.limit(options.limit);
     }
-    
+
     if (options.offset) {
       query = query.range(options.offset, options.offset + (options.limit || 50) - 1);
     }
-    
+
     const { data, error } = await query;
-    
+
     if (error) {
       logger.error('Failed to fetch all user settings:', {
         error: error.message,
@@ -228,10 +227,10 @@ export const settingsService = {
       });
       throw new Error(`Failed to fetch all settings: ${error.message}`);
     }
-    
+
     return data || [];
   },
-  
+
   /**
    * Resets user settings to default values
    * @returns {Promise<AppSettings>} Reset settings
@@ -242,12 +241,12 @@ export const settingsService = {
     if (!userId) {
       throw new Error('No authenticated user found');
     }
-    
+
     // Delete existing settings and create new ones with defaults
     await this.deleteSettings();
     return await this.createDefaultSettings(userId);
   },
-  
+
   /**
    * Validates settings data before saving
    * @param {Partial<AppSettings>} settings - Settings to validate
@@ -255,25 +254,20 @@ export const settingsService = {
    */
   validateSettings(settings: Partial<AppSettings>): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
-    
+
     // Validate theme
     if (settings.theme && !['light', 'dark', 'system'].includes(settings.theme)) {
       errors.push('Theme must be "light", "dark", or "system"');
     }
-    
-    // Validate view mode
-    if (settings.viewMode && !['grid', 'list'].includes(settings.viewMode)) {
-      errors.push('View mode must be "grid" or "list"');
-    }
-    
+
     // Add more validation rules as needed
-    
+
     return {
       isValid: errors.length === 0,
       errors
     };
   },
-  
+
   /**
    * Gets the count of users with specific settings
    * @param {Object} criteria - Settings criteria to count
@@ -284,16 +278,16 @@ export const settingsService = {
     let query = supabase
       .from('user_settings')
       .select('*', { count: 'exact', head: true });
-    
+
     // Apply criteria filters
     Object.entries(criteria).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         query = query.eq(key, value);
       }
     });
-    
+
     const { count, error } = await query;
-    
+
     if (error) {
       logger.error('Failed to count users by settings:', {
         error: error.message,
@@ -302,7 +296,7 @@ export const settingsService = {
       });
       throw new Error(`Failed to count users: ${error.message}`);
     }
-    
+
     return count || 0;
   },
 };

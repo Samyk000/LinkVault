@@ -59,8 +59,8 @@ export class SupabaseDatabaseService {
    * @returns {Promise<T>} - Result of the function
    */
   private async dedupeRequest<T>(
-    key: string, 
-    fn: () => Promise<T>, 
+    key: string,
+    fn: () => Promise<T>,
     cacheOptions?: CacheOptions
   ): Promise<T> {
     // Check cache first
@@ -103,10 +103,10 @@ export class SupabaseDatabaseService {
    * @returns {Promise<T[]>} - Results of all requests
    */
   private async batchRequests<T>(requests: BatchRequest<T>[]): Promise<T[]> {
-    const promises = requests.map(({ key, fn, cacheOptions }) => 
+    const promises = requests.map(({ key, fn, cacheOptions }) =>
       this.dedupeRequest<T>(key, fn, cacheOptions)
     );
-    
+
     return Promise.all(promises);
   }
 
@@ -283,7 +283,7 @@ export class SupabaseDatabaseService {
       this.invalidateCache(['links', `user:${user.id}`]);
 
       const updateData: LinkUpdateData = {};
-      
+
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.description !== undefined) updateData.description = updates.description;
       if (updates.url !== undefined) updateData.url = updates.url;
@@ -383,14 +383,14 @@ export class SupabaseDatabaseService {
       }
       throw new DatabaseError('Failed to restore link', { linkId: id }, error as Error);
     }
-   }
+  }
 
-   /**
-    * Permanently delete a link
-    * @param {string} id - Link ID
-    */
-   async permanentlyDeleteLink(id: string): Promise<void> {
-     try {
+  /**
+   * Permanently delete a link
+   * @param {string} id - Link ID
+   */
+  async permanentlyDeleteLink(id: string): Promise<void> {
+    try {
       const { data: { user } } = await this.supabase.auth.getUser();
       if (!user) {
         throw new AuthenticationError('User not authenticated');
@@ -414,13 +414,13 @@ export class SupabaseDatabaseService {
       }
       throw new DatabaseError('Failed to permanently delete link', { linkId: id }, error as Error);
     }
-   }
+  }
 
-   /**
-    * Empty trash (permanently delete all trashed links)
-    */
-   async emptyTrash(): Promise<void> {
-     try {
+  /**
+   * Empty trash (permanently delete all trashed links)
+   */
+  async emptyTrash(): Promise<void> {
+    try {
       const { data: { user } } = await this.supabase.auth.getUser();
       if (!user) {
         throw new AuthenticationError('User not authenticated');
@@ -444,11 +444,11 @@ export class SupabaseDatabaseService {
       }
       throw new DatabaseError('Failed to empty trash', {}, error as Error);
     }
-   }
+  }
 
-   /**
-    * Restore all links from trash
-    */
+  /**
+   * Restore all links from trash
+   */
   async restoreAllFromTrash(): Promise<void> {
     try {
       const { data: { user } } = await this.supabase.auth.getUser();
@@ -613,7 +613,7 @@ export class SupabaseDatabaseService {
       }
 
       const updateData: FolderUpdateData = {};
-      
+
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.description !== undefined) updateData.description = updates.description;
       if (updates.color !== undefined) updateData.color = updates.color;
@@ -733,7 +733,6 @@ export class SupabaseDatabaseService {
 
         return {
           theme: data.theme as 'light' | 'dark' | 'system',
-          viewMode: data.view_mode as 'grid' | 'list',
         };
       } catch (error) {
         logger.error('Error fetching settings:', error);
@@ -762,13 +761,11 @@ export class SupabaseDatabaseService {
       const updateData: {
         user_id: string;
         theme?: string;
-        view_mode?: string;
       } = {
         user_id: user.id,
       };
-      
+
       if (settings.theme !== undefined) updateData.theme = settings.theme;
-      if (settings.viewMode !== undefined) updateData.view_mode = settings.viewMode;
 
       // Use proper upsert with conflict resolution
       const { data, error } = await this.supabase
@@ -787,7 +784,6 @@ export class SupabaseDatabaseService {
             .from('user_settings')
             .update({
               theme: settings.theme,
-              view_mode: settings.viewMode,
             })
             .eq('user_id', user.id)
             .select()
@@ -802,18 +798,17 @@ export class SupabaseDatabaseService {
 
           const result = {
             theme: updateDataResult.theme as 'light' | 'dark' | 'system',
-            viewMode: updateDataResult.view_mode as 'grid' | 'list',
           };
-          
+
           if (!isAppSettings(result)) {
             throw new DatabaseError('Invalid settings data received', { userId: user.id });
           }
-          
+
           return result;
         }
         throw new DatabaseError('Failed to update settings', { userId: user.id }, error as Error);
       }
-      
+
       if (!data) {
         throw new DatabaseError('Failed to update settings - no data returned', { userId: user.id });
       }
@@ -822,11 +817,11 @@ export class SupabaseDatabaseService {
         theme: data.theme as 'light' | 'dark' | 'system',
         viewMode: data.view_mode as 'grid' | 'list',
       };
-      
+
       if (!isAppSettings(result)) {
         throw new DatabaseError('Invalid settings data received', { userId: user.id });
       }
-      
+
       return result;
     } catch (error) {
       if (error instanceof DatabaseError || error instanceof AuthenticationError) {
@@ -847,7 +842,7 @@ export class SupabaseDatabaseService {
    */
   subscribeToLinks(callback: (links: Link[]) => void): () => void {
     const channelName = 'links_changes';
-    
+
     // Remove existing channel if it exists to prevent duplicates
     if (this.activeChannels.has(channelName)) {
       const existingChannel = this.activeChannels.get(channelName);
@@ -868,7 +863,7 @@ export class SupabaseDatabaseService {
 
     const createSubscription = () => {
       if (unsubscribeRequested) return;
-      
+
       const channel = this.supabase
         .channel(channelName, {
           config: {
@@ -904,18 +899,18 @@ export class SupabaseDatabaseService {
               }, 50);
 
             } catch (error) {
-               logger.error('Error handling realtime link changes:', {
-                 error: error instanceof Error ? error.message : 'Unknown error',
-                 eventType: payload.eventType,
-                 table: payload.table,
-                 timestamp: new Date().toISOString()
-               });
-               performanceMonitor.trackError({
-                 message: `Realtime link change error: ${(error as Error).message}`,
-                 severity: 'medium',
-                 context: { event: payload.eventType, table: 'links' }
-               });
-             }
+              logger.error('Error handling realtime link changes:', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                eventType: payload.eventType,
+                table: payload.table,
+                timestamp: new Date().toISOString()
+              });
+              performanceMonitor.trackError({
+                message: `Realtime link change error: ${(error as Error).message}`,
+                severity: 'medium',
+                context: { event: payload.eventType, table: 'links' }
+              });
+            }
           }
         )
         .on('system', {}, (payload) => {
@@ -934,13 +929,13 @@ export class SupabaseDatabaseService {
             retryCount = 0; // Reset retry count on successful connection
           } else if (status === 'CHANNEL_ERROR') {
             logger.error('Failed to subscribe to links changes');
-            
+
             // Retry connection with exponential backoff
             if (retryCount < maxRetries && !unsubscribeRequested) {
               retryCount++;
               const delay = retryDelay * Math.pow(2, retryCount - 1);
               logger.debug(`Retrying links subscription in ${delay}ms (attempt ${retryCount}/${maxRetries})`);
-              
+
               setTimeout(() => {
                 if (this.activeChannels.has(channelName) && !unsubscribeRequested) {
                   const ch = this.activeChannels.get(channelName);
@@ -956,13 +951,13 @@ export class SupabaseDatabaseService {
                 }
               }, delay);
             } else {
-               logger.error('Max retries reached for links subscription');
-               performanceMonitor.trackError({
-                 message: 'Links subscription failed after max retries',
-                 severity: 'high',
-                 context: { maxRetries, channelName }
-               });
-             }
+              logger.error('Max retries reached for links subscription');
+              performanceMonitor.trackError({
+                message: 'Links subscription failed after max retries',
+                severity: 'high',
+                context: { maxRetries, channelName }
+              });
+            }
           } else if (status === 'CLOSED') {
             logger.debug('Links subscription closed');
           }
@@ -1018,7 +1013,7 @@ export class SupabaseDatabaseService {
 
     const createSubscription = () => {
       if (unsubscribeRequested) return;
-      
+
       const channel = this.supabase
         .channel(channelName, {
           config: {
@@ -1045,13 +1040,13 @@ export class SupabaseDatabaseService {
               const folders = await this.getFolders();
               callback(folders);
             } catch (error) {
-               logger.error('Error handling realtime folder changes:', error);
-               performanceMonitor.trackError({
-                 message: `Realtime folder change error: ${(error as Error).message}`,
-                 severity: 'medium',
-                 context: { event: payload.eventType, table: 'folders' }
-               });
-             }
+              logger.error('Error handling realtime folder changes:', error);
+              performanceMonitor.trackError({
+                message: `Realtime folder change error: ${(error as Error).message}`,
+                severity: 'medium',
+                context: { event: payload.eventType, table: 'folders' }
+              });
+            }
           }
         )
         .on('system', {}, (payload) => {
@@ -1070,13 +1065,13 @@ export class SupabaseDatabaseService {
             retryCount = 0; // Reset retry count on successful connection
           } else if (status === 'CHANNEL_ERROR') {
             logger.error('Failed to subscribe to folders changes');
-            
+
             // Retry connection with exponential backoff
             if (retryCount < maxRetries && !unsubscribeRequested) {
               retryCount++;
               const delay = retryDelay * Math.pow(2, retryCount - 1);
               logger.debug(`Retrying folders subscription in ${delay}ms (attempt ${retryCount}/${maxRetries})`);
-              
+
               setTimeout(() => {
                 if (this.activeChannels.has(channelName) && !unsubscribeRequested) {
                   const ch = this.activeChannels.get(channelName);
@@ -1092,13 +1087,13 @@ export class SupabaseDatabaseService {
                 }
               }, delay);
             } else {
-               logger.error('Max retries reached for folders subscription');
-               performanceMonitor.trackError({
-                 message: 'Folders subscription failed after max retries',
-                 severity: 'high',
-                 context: { maxRetries, channelName }
-               });
-             }
+              logger.error('Max retries reached for folders subscription');
+              performanceMonitor.trackError({
+                message: 'Folders subscription failed after max retries',
+                severity: 'high',
+                context: { maxRetries, channelName }
+              });
+            }
           } else if (status === 'CLOSED') {
             logger.debug('Folders subscription closed');
           }
@@ -1139,7 +1134,7 @@ export class SupabaseDatabaseService {
       .eq('user_id', user.id);
 
     if (error) throw error;
-    
+
     // Clear cache after mutation
     this.invalidateCache(['links', `user:${user.id}`]);
   }
@@ -1157,7 +1152,7 @@ export class SupabaseDatabaseService {
       .eq('user_id', user.id);
 
     if (error) throw error;
-    
+
     // Clear cache after mutation
     this.invalidateCache(['folders', `user:${user.id}`]);
   }
@@ -1175,7 +1170,7 @@ export class SupabaseDatabaseService {
       .eq('user_id', user.id);
 
     if (error) throw error;
-    
+
     // Clear cache after mutation
     this.invalidateCache(['settings', `user:${user.id}`]);
   }
@@ -1205,7 +1200,7 @@ export class SupabaseDatabaseService {
       const updateData: LinkUpdateData & { updated_at: string } = {
         updated_at: new Date().toISOString(),
       };
-      
+
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.description !== undefined) updateData.description = updates.description;
       if (updates.url !== undefined) updateData.url = updates.url;
@@ -1266,7 +1261,7 @@ export class SupabaseDatabaseService {
 
       const { error } = await this.supabase
         .from('links')
-        .update({ 
+        .update({
           deleted_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -1276,7 +1271,7 @@ export class SupabaseDatabaseService {
       if (error) {
         throw new DatabaseError('Failed to bulk delete links', { linkIds: ids }, error as Error);
       }
-      
+
       // Invalidate cache BEFORE operation to prevent race conditions
       this.invalidateCache(['links', `user:${user.id}`]);
     } catch (error) {
@@ -1304,7 +1299,7 @@ export class SupabaseDatabaseService {
 
       const { error } = await this.supabase
         .from('links')
-        .update({ 
+        .update({
           deleted_at: null,
           updated_at: new Date().toISOString()
         })
@@ -1314,7 +1309,7 @@ export class SupabaseDatabaseService {
       if (error) {
         throw new DatabaseError('Failed to bulk restore links', { linkIds: ids }, error as Error);
       }
-      
+
       // Invalidate cache BEFORE operation to prevent race conditions
       this.invalidateCache(['links', `user:${user.id}`]);
     } catch (error) {
@@ -1349,7 +1344,7 @@ export class SupabaseDatabaseService {
       if (error) {
         throw new DatabaseError('Failed to bulk permanently delete links', { linkIds: ids }, error as Error);
       }
-      
+
       // Invalidate cache BEFORE operation to prevent race conditions
       this.invalidateCache(['links', `user:${user.id}`]);
     } catch (error) {
@@ -1435,7 +1430,7 @@ export class SupabaseDatabaseService {
   unsubscribeAll(): void {
     try {
       logger.debug(`Unsubscribing from ${this.activeChannels.size} active channels`);
-      
+
       // Remove all channels
       for (const [channelName, channel] of this.activeChannels.entries()) {
         try {
@@ -1445,7 +1440,7 @@ export class SupabaseDatabaseService {
           logger.warn(`Error removing channel ${channelName}:`, error);
         }
       }
-      
+
       // Clear the map
       this.activeChannels.clear();
     } catch (error) {

@@ -22,10 +22,7 @@ export function QuickAccessSection({ onViewClick }: QuickAccessSectionProps) {
   const { allLinksCount, favoritesCount, trashCount } = useLinkCounts();
 
   return (
-    <div className="mb-4">
-      <h4 className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Quick Access
-      </h4>
+    <div>
       <QuickAccessNav
         allLinksCount={allLinksCount}
         favoritesCount={favoritesCount}

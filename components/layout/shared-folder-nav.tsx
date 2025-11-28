@@ -40,14 +40,14 @@ export function FolderItem({ folder, isSubFolder = false, onFolderClick }: Folde
   const folders = useStore((state) => state.folders);
   const expandedFolders = useStore((state) => state.expandedFolders);
   const toggleFolderExpanded = useStore((state) => state.toggleFolderExpanded);
-  
+
   const {
     handleEditFolder,
     handleAddSubFolder,
     handleDeleteFolder,
     getFolderCount,
   } = useFolderActions();
-  
+
   // Share modal state
   const isShareFolderModalOpen = useStore((state) => state.isShareFolderModalOpen);
   const setShareFolderModalOpen = useStore((state) => state.setShareFolderModalOpen);
@@ -68,13 +68,13 @@ export function FolderItem({ folder, isSubFolder = false, onFolderClick }: Folde
 
   return (
     <>
-      <div className={`group relative ${isSubFolder ? 'h-8' : 'h-9'}`}>
+      <div className={`group relative ${isSubFolder ? 'h-8' : 'h-8'}`}>
         {/* Chevron Button */}
         {hasSubFolders && (
           <Button
             variant="ghost"
             size="icon"
-            className={`absolute left-0 top-0 ${isSubFolder ? 'h-8' : 'h-9'} w-6 shrink-0 z-20`}
+            className={`absolute left-0 top-0 ${isSubFolder ? 'h-8' : 'h-8'} w-6 shrink-0 z-20`}
             onClick={(e) => {
               e.stopPropagation();
               toggleFolderExpanded(folder.id);
@@ -87,14 +87,14 @@ export function FolderItem({ folder, isSubFolder = false, onFolderClick }: Folde
             )}
           </Button>
         )}
-        
+
         {/* Main Folder Button */}
         <TooltipProvider delayDuration={500}>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant={selectedFolderId === folder.id && currentView === 'all' ? "secondary" : "ghost"}
-                className={`absolute ${hasSubFolders ? 'left-6' : 'left-0'} top-0 ${isSubFolder ? 'h-8' : 'h-9'} justify-start`}
+                className={`absolute ${hasSubFolders ? 'left-6' : 'left-0'} top-0 ${isSubFolder ? 'h-8' : 'h-8'} justify-start`}
                 style={{ width: hasSubFolders ? 'calc(100% - 24px - 60px)' : 'calc(100% - 60px)' }}
                 onClick={handleClick}
               >
@@ -114,20 +114,20 @@ export function FolderItem({ folder, isSubFolder = false, onFolderClick }: Folde
             )}
           </Tooltip>
         </TooltipProvider>
-        
+
         {/* Count Badge - Fixed Position */}
-        <div className={`absolute right-8 top-0 ${isSubFolder ? 'h-8' : 'h-9'} flex items-center pointer-events-none z-30`}>
+        <div className={`absolute right-8 top-0 ${isSubFolder ? 'h-8' : 'h-8'} flex items-center pointer-events-none z-30`}>
           <span className="text-[11px] text-muted-foreground font-medium">{getFolderCount(folder.id)}</span>
         </div>
-        
+
         {/* Three-Dots Menu - Fixed Position */}
-        <div className={`absolute right-0 top-0 ${isSubFolder ? 'h-8' : 'h-9'} flex items-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-40`}>
+        <div className={`absolute right-0 top-0 ${isSubFolder ? 'h-8' : 'h-8'} flex items-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-40`}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className={isSubFolder ? 'h-7 w-7' : 'h-8 w-8'}
+                className={isSubFolder ? 'h-7 w-7' : 'h-7 w-7'}
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreVertical className="size-4" />
@@ -219,36 +219,36 @@ export function QuickAccessNav({ allLinksCount, favoritesCount, trashCount, onVi
     <nav className="space-y-1">
       <Button
         variant={currentView === 'all' && selectedFolderId === null ? "secondary" : "ghost"}
-        className="w-full justify-between gap-2"
+        className="w-full justify-between gap-2 h-8 px-2"
         onClick={() => handleViewClick('all')}
       >
         <div className="flex items-center gap-2">
           <Folder className="size-4" />
-          <span className="text-sm md:text-base">All Links</span>
+          <span className="text-xs md:text-sm">All Links</span>
         </div>
-        <span className="text-xs text-muted-foreground">{allLinksCount}</span>
+        <span className="text-[10px] text-muted-foreground">{allLinksCount}</span>
       </Button>
       <Button
         variant={currentView === 'favorites' ? "secondary" : "ghost"}
-        className="w-full justify-between gap-2"
+        className="w-full justify-between gap-2 h-8 px-2"
         onClick={() => handleViewClick('favorites')}
       >
         <div className="flex items-center gap-2">
           <Star className="size-4" />
-          <span className="text-sm md:text-base">Favorites</span>
+          <span className="text-xs md:text-sm">Favorites</span>
         </div>
-        <span className="text-xs text-muted-foreground">{favoritesCount}</span>
+        <span className="text-[10px] text-muted-foreground">{favoritesCount}</span>
       </Button>
       <Button
         variant={currentView === 'trash' ? "secondary" : "ghost"}
-        className="w-full justify-between gap-2"
+        className="w-full justify-between gap-2 h-8 px-2"
         onClick={() => handleViewClick('trash')}
       >
         <div className="flex items-center gap-2">
           <Trash2 className="size-4" />
-          <span className="text-sm md:text-base">Trash</span>
+          <span className="text-xs md:text-sm">Trash</span>
         </div>
-        <span className="text-xs text-muted-foreground">{trashCount}</span>
+        <span className="text-[10px] text-muted-foreground">{trashCount}</span>
       </Button>
     </nav>
   );

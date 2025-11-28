@@ -10,7 +10,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Link } from "@/types";
 import { LinkCard } from "./link-card";
-import { LinkCardList } from "./link-card-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { useUIStore, useSettingsStore } from "@/store";
@@ -95,9 +94,9 @@ function LinkGridComponent({ links, isLoading = false, isInTrash = false, select
     }
   }, [links]);
 
-  const isListView = settings.viewMode === 'list';
 
-  // Reset displayed links when links change
+
+  // Update displayed links when links change, preserving the current scroll position/count
   useEffect(() => {
     // Deduplicate links by ID to prevent React key conflicts
     const uniqueLinks = Array.from(new Map(links.map(link => [link.id, link])).values());
@@ -107,7 +106,12 @@ function LinkGridComponent({ links, isLoading = false, isInTrash = false, select
       logger.warn(`Detected ${links.length - uniqueLinks.length} duplicate links. Original: ${links.length}, deduplicated: ${uniqueLinks.length}`);
     }
 
-    setDisplayedLinks(uniqueLinks.slice(0, IMAGE_CONSTANTS.INITIAL_LOAD_COUNT));
+    setDisplayedLinks(prev => {
+      // If we have previous links, try to maintain the same number of items
+      // This prevents the "flicker" or reset to top when a link is updated (e.g. favorited)
+      const currentCount = Math.max(prev.length, IMAGE_CONSTANTS.INITIAL_LOAD_COUNT);
+      return uniqueLinks.slice(0, currentCount);
+    });
   }, [links]);
 
   // Lazy loading with intersection observer
@@ -168,7 +172,7 @@ function LinkGridComponent({ links, isLoading = false, isInTrash = false, select
 
   if (isLoading) {
     return (
-      <div className={isListView ? "flex flex-col gap-4" : "grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"}>
+      <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {Array.from({ length: IMAGE_CONSTANTS.INITIAL_LOAD_COUNT }).map((_, i) => (
           <LinkCardSkeleton key={i} />
         ))}
@@ -192,27 +196,14 @@ function LinkGridComponent({ links, isLoading = false, isInTrash = false, select
 
   return (
     <>
-      <div className={`transition-all duration-300 ease-in-out ${isListView
-        ? "flex flex-col gap-4"
-        : "grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-        }`}>
+      <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {displayedLinks.map((link, index) => {
           // OPTIMIZED: Only prioritize first 2 images (first row on mobile) for LCP
           // Reduced from 3 to 2 to prevent waterfall loading of too many eager images
           // This dramatically improves initial page load speed for thumbnail-heavy pages
           const isPriority = index < 2;
 
-          return isListView ? (
-            <LinkCardList
-              key={link.id}
-              link={link}
-              isInTrash={isInTrash}
-              isSelected={selectedIds.includes(link.id)}
-              onToggleSelect={onToggleSelect}
-              isSelectionModeActive={isSelectionModeActive}
-              priority={isPriority}
-            />
-          ) : (
+          return (
             <LinkCard
               key={link.id}
               link={link}

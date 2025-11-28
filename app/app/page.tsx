@@ -7,23 +7,21 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useCallback, useDeferredValue } from "react";
-import { Star, Trash2, Search, RotateCcw } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Star, Trash2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { usePerformanceMonitor } from "@/hooks/use-performance-monitor";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
 import { LinkGrid } from "@/components/links/link-grid";
-import { ViewToggle } from "@/components/links/view-toggle";
 import { MobileFAB } from "@/components/common/mobile-fab";
 import { EmptyState } from "@/components/common/empty-state";
 import { BulkActionBar } from "@/components/common/bulk-action-bar";
-import { 
-  LazyAddLinkModal, 
-  LazyCreateFolderModal, 
-  LazyEmptyTrashModal, 
-  LazyRestoreAllModal 
+import {
+  LazyAddLinkModal,
+  LazyCreateFolderModal,
+  LazyEmptyTrashModal,
+  LazyRestoreAllModal
 } from "@/components/lazy";
 import { useStore } from "@/store/useStore";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
@@ -42,7 +40,7 @@ import { useRouter } from "next/navigation";
 export default function AppPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  
+
   // Redirect to login if not authenticated (edge case: session expired during use)
   useEffect(() => {
     if (!authLoading && !user) {
@@ -58,7 +56,7 @@ export default function AppPage() {
   const searchFilters = useStore((state) => state.searchFilters);
   const isHydrated = useStore((state) => state.isHydrated);
   const isLoadingLinks = useStore((state) => state.isLoadingLinks);
-  
+
   const setSearchFilters = useStore((state) => state.setSearchFilters);
   const setAddLinkModalOpen = useStore((state) => state.setAddLinkModalOpen);
   const emptyTrash = useStore((state) => state.emptyTrash);
@@ -66,11 +64,11 @@ export default function AppPage() {
   const isAddLinkModalOpen = useStore((state) => state.isAddLinkModalOpen);
   const isCreateFolderModalOpen = useStore((state) => state.isCreateFolderModalOpen);
   const { toast } = useToast();
-  
+
   // Show loading skeleton while store is hydrating OR while links are loading
   const isInitialLoading = !isHydrated || isLoadingLinks;
   const isLoadingData = useStore((state) => state.isLoadingData);
-  
+
   // Performance monitoring for main app page - disabled to reduce overhead
   const { trackMetric, trackInteraction, trackError } = usePerformanceMonitor({
     componentName: 'AppPage',
@@ -78,14 +76,17 @@ export default function AppPage() {
     trackInteractions: true,
     trackErrors: true
   });
-  
-  const [isSearching, setIsSearching] = useState(false);
+
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false);
   const [showRestoreAllModal, setShowRestoreAllModal] = useState(false);
-  
+
   // Debounce search query for better performance
   const debouncedSearchQuery = useDebounce(searchFilters.query, SEARCH_DEBOUNCE_DELAY);
+
+  // Derived state for search loading
+  const isDebouncing = searchFilters.query !== debouncedSearchQuery;
 
   // Defer expensive computations to avoid blocking initial render
   const deferredLinks = useDeferredValue(links);
@@ -97,7 +98,7 @@ export default function AppPage() {
   // Get all descendant folder IDs for the selected folder (includes parent + all sub-folders)
   // Only compute when not loading to avoid blocking
   const descendantFolderIds = useSpecificFolderDescendants(
-    isLoadingLinks ? null : deferredSelectedFolderId, 
+    isLoadingLinks ? null : deferredSelectedFolderId,
     deferredFolders
   );
 
@@ -105,7 +106,7 @@ export default function AppPage() {
   // Use deferred values to prevent blocking initial render
   const filteredLinks = useMemo(() => {
     // Early return if still loading to prevent expensive computation
-    if (isLoadingLinks) {
+    if (isLoadingLinks && links.length === 0) {
       return [];
     }
 
@@ -148,7 +149,7 @@ export default function AppPage() {
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-  }, [deferredLinks, deferredSelectedFolderId, deferredCurrentView, deferredSearchQuery, descendantFolderIds, isLoadingLinks]);
+  }, [deferredLinks, deferredSelectedFolderId, deferredCurrentView, deferredSearchQuery, descendantFolderIds, isLoadingLinks, links.length]);
 
   // Memoize callbacks to prevent unnecessary re-renders
   const handleToggleSelect = useCallback((linkId: string) => {
@@ -169,7 +170,7 @@ export default function AppPage() {
   // Memoize select all handler
   const handleSelectAllEvent = useCallback(() => {
     const startTime = performance.now();
-    
+
     try {
       const visibleLinkIds = filteredLinks.map(link => link.id);
       setSelectedIds(prev => {
@@ -186,13 +187,13 @@ export default function AppPage() {
           return newSelection;
         }
       });
-      
+
       const duration = performance.now() - startTime;
       trackMetric('select_all_time', duration, {
         visibleLinksCount: visibleLinkIds.length.toString(),
         currentView
       });
-      
+
       trackInteraction('click', 'select_all_toggle', {
         visibleLinksCount: visibleLinkIds.length.toString(),
         currentView,
@@ -215,20 +216,17 @@ export default function AppPage() {
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const startTime = performance.now();
     const query = e.target.value;
-    
+
     try {
       // Update search filters immediately for responsive UI
       setSearchFilters({ query });
-      
-      // Show loading state while debouncing
-      setIsSearching(!!query);
-      
+
       const duration = performance.now() - startTime;
       trackMetric('search_input_time', duration, {
         queryLength: query.length.toString(),
         hasQuery: (!!query).toString()
       });
-      
+
       trackInteraction('input', 'search_query', {
         queryLength: query.length.toString(),
         hasQuery: (!!query).toString(),
@@ -241,11 +239,6 @@ export default function AppPage() {
       });
     }
   }, [setSearchFilters, trackMetric, trackInteraction, trackError]);
-  
-  // Update loading state when debounced query changes
-  useEffect(() => {
-    setIsSearching(false);
-  }, [debouncedSearchQuery]);
 
   // Memoize modal handlers
   const handleEmptyTrash = useCallback(() => {
@@ -325,25 +318,11 @@ export default function AppPage() {
                     {isLoadingData ? '...' : `(${filteredLinks.length})`}
                   </span>
                 </div>
-                
+
                 {/* Search Bar + View Toggle - First on mobile, right on desktop */}
-                <div className="flex items-center gap-3 sm:gap-4 md:order-2">
-                  <div className="flex-1 md:w-[280px] lg:w-[340px] xl:w-[400px]">
-                    <div className="relative">
-                      <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                      <Input
-                        type="search"
-                        placeholder="Search links..."
-                        value={searchFilters.query}
-                        onChange={handleSearchChange}
-                        className="pl-10 pr-4 h-11 text-base border-2 focus:border-primary/50 transition-all duration-200 shadow-sm hover:shadow-md focus:shadow-md"
-                      />
-                    </div>
-                  </div>
-                  <ViewToggle />
-                </div>
+
               </div>
-              
+
               {/* Trash Actions Row - Only in trash view, below view toggle */}
               {deferredCurrentView === 'trash' && !isLoadingData && filteredLinks.length > 0 && (
                 <div className="flex justify-end mt-4 sm:mt-5">
@@ -416,7 +395,7 @@ export default function AppPage() {
               <LinkGrid
                 links={filteredLinks}
                 isInTrash={deferredCurrentView === 'trash'}
-                isLoading={isSearching || isLoadingLinks}
+                isLoading={isDebouncing || isLoadingLinks}
                 selectedIds={selectedIds}
                 onToggleSelect={handleToggleSelect}
                 isSelectionModeActive={selectedIds.length > 0}

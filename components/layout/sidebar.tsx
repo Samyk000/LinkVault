@@ -113,23 +113,25 @@ export function Sidebar() {
   return (
     <>
       <aside className="hidden md:flex w-64 lg:w-72 max-w-72 flex-col border-r border-border/40 bg-background/50 backdrop-blur-sm">
-        <ScrollArea className="flex-1">
-          <div className="p-4 lg:p-5 space-y-2">
-            {/* Quick Access Section */}
-            <QuickAccessSection />
+        <div className="p-4 lg:p-5 pb-0">
+          {/* Quick Access Section - Pinned to top */}
+          <QuickAccessSection />
+        </div>
 
-            {/* Folders Section */}
+        <ScrollArea className="flex-1">
+          <div className="px-4 lg:px-5 pb-2 space-y-2">
+            {/* Folders Section - Scrollable */}
             <FoldersSection />
           </div>
         </ScrollArea>
 
         {/* User Profile Section */}
-        <div className="p-4 lg:p-5 border-t border-border/40 bg-muted/30">
+        <div className="p-2 lg:p-3 border-t border-border/40">
           <div className="flex items-center gap-2.5">
             <Button
               variant="ghost"
               onClick={() => setIsProfileModalOpen(true)}
-              className="flex-1 justify-start gap-3 h-auto p-2.5 hover:bg-muted/80 rounded-lg transition-colors"
+              className="flex-1 justify-start gap-3 h-auto p-2 hover:bg-muted/50 rounded-lg transition-colors"
             >
               <div className="flex size-8 items-center justify-center rounded-full bg-orange-500 text-white text-sm font-semibold shadow-sm">
                 {displayName.charAt(0).toUpperCase()}
@@ -146,7 +148,7 @@ export function Sidebar() {
               size="icon"
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors hover:bg-muted/50"
             >
               {isLoggingOut ? (
                 <Loader2 className="size-4 animate-spin-gpu" />

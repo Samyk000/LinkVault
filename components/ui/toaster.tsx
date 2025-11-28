@@ -26,15 +26,17 @@ export function Toaster() {
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
           <Toast key={id} {...props}>
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="flex items-center gap-1 flex-1">
-                {title && <ToastTitle>{title}</ToastTitle>}
-                {description && (
-                  <ToastDescription>{description}</ToastDescription>
-                )}
+            {title && <ToastTitle>{title}</ToastTitle>}
+            {description && !title && (
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <ToastDescription className="flex-1">{description}</ToastDescription>
+                {action && <div className="flex-shrink-0">{action}</div>}
               </div>
-              {action && <div className="flex-shrink-0">{action}</div>}
-            </div>
+            )}
+            {description && title && (
+              <ToastDescription>{description}</ToastDescription>
+            )}
+            {action && title && <div className="flex-shrink-0">{action}</div>}
             <ToastClose />
           </Toast>
         )

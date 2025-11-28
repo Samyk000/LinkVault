@@ -17,7 +17,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] flex max-h-screen w-auto flex-col p-4 min-w-[200px] max-w-[90vw] sm:max-w-[400px]",
+      "fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] flex max-h-screen w-auto flex-col p-4 gap-3 min-w-[320px] max-w-[calc(100vw-2rem)] sm:max-w-md",
       className
     )}
     {...props}
@@ -26,7 +26,7 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-2 overflow-hidden rounded-lg border px-3 py-2.5 pr-8 shadow-md transition-all duration-200 ease-in-out will-change-transform data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full data-[state=open]:duration-200 data-[state=closed]:duration-150",
+  "group pointer-events-auto relative flex w-full items-center justify-between space-x-3 overflow-hidden rounded-xl border px-4 py-3 pr-10 shadow-lg transition-all duration-200 ease-out will-change-transform data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-90 data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full data-[state=open]:duration-200 data-[state=closed]:duration-100",
   {
     variants: {
       variant: {
@@ -59,18 +59,18 @@ const toastVariants = cva(
 const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
-    VariantProps<typeof toastVariants> & {
-      icon?: React.ReactNode
-    }
+  VariantProps<typeof toastVariants> & {
+    icon?: React.ReactNode
+  }
 >(({ className, variant, icon, children, ...props }, ref) => {
   return (
     <ToastPrimitives.Root
       ref={ref}
       className={cn(toastVariants({ variant }), className)}
-      duration={3000}
+      duration={2000}
       {...props}
     >
-      <div className="flex items-center gap-1.5 w-full">
+      <div className="flex items-center gap-2.5 w-full">
         {icon && (
           <div className="flex-shrink-0 flex items-center justify-center">
             {icon}
@@ -111,13 +111,13 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "absolute right-0.5 top-0.5 rounded p-0.5 text-foreground/50 opacity-100 transition-opacity hover:text-foreground hover:bg-secondary/80 focus:opacity-100 focus:outline-none",
+      "absolute right-1.5 top-1.5 rounded-md p-1 text-foreground/50 opacity-100 transition-all hover:text-foreground hover:bg-muted/80 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring",
       className
     )}
     toast-close=""
     {...props}
   >
-    <X className="size-3" />
+    <X className="size-4" />
   </ToastPrimitives.Close>
 ))
 ToastClose.displayName = ToastPrimitives.Close.displayName
@@ -128,7 +128,7 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    className={cn("text-sm font-semibold leading-none", className)}
+    className={cn("text-sm font-medium leading-none tracking-tight", className)}
     {...props}
   />
 ))
@@ -140,7 +140,7 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn("text-xs opacity-80 leading-none", className)}
+    className={cn("text-xs opacity-70 leading-relaxed", className)}
     {...props}
   />
 ))

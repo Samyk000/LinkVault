@@ -31,6 +31,10 @@ import {
   Terminal,
   Cpu,
   Lightbulb,
+  Zap,
+  Cloud,
+  Gift,
+  Map,
   type LucideIcon,
 } from "lucide-react";
 
@@ -48,27 +52,31 @@ export const FOLDER_ICONS: FolderIconOption[] = [
   { name: "Github", icon: Github, category: "social", color: "#333333" },
   { name: "Twitter", icon: Twitter, category: "social", color: "#1DA1F2" },
   { name: "Linkedin", icon: Linkedin, category: "social", color: "#0A66C2" },
-  
+
   // Productivity
   { name: "Briefcase", icon: Briefcase, category: "productivity", color: "#8B4513" },
   { name: "FileText", icon: FileText, category: "productivity", color: "#4B5563" },
   { name: "Calendar", icon: Calendar, category: "productivity", color: "#DC2626" },
   { name: "Bookmark", icon: Bookmark, category: "productivity", color: "#FFA500" },
   { name: "Clock", icon: Clock, category: "productivity", color: "#6366F1" },
-  
+
   // Technical
   { name: "Code", icon: Code, category: "technical", color: "#10B981" },
   { name: "Database", icon: Database, category: "technical", color: "#3B82F6" },
   { name: "Terminal", icon: Terminal, category: "technical", color: "#22C55E" },
   { name: "Cpu", icon: Cpu, category: "technical", color: "#8B5CF6" },
   { name: "Lightbulb", icon: Lightbulb, category: "technical", color: "#FCD34D" },
-  
+
   // General
   { name: "Folder", icon: Folder, category: "general", color: "#F59E0B" },
   { name: "Home", icon: Home, category: "general", color: "#059669" },
   { name: "Heart", icon: Heart, category: "general", color: "#EF4444" },
   { name: "Star", icon: Star, category: "general", color: "#FBBF24" },
   { name: "Music", icon: Music, category: "general", color: "#EC4899" },
+  { name: "Zap", icon: Zap, category: "general", color: "#EAB308" },
+  { name: "Cloud", icon: Cloud, category: "general", color: "#0EA5E9" }, // Sky-500
+  { name: "Gift", icon: Gift, category: "general", color: "#F43F5E" }, // Rose-500
+  { name: "Map", icon: Map, category: "general", color: "#10B981" }, // Emerald-500
   { name: "Video", icon: Video, category: "general", color: "#8B5CF6" },
   { name: "Image", icon: Image, category: "general", color: "#14B8A6" },
   { name: "ShoppingCart", icon: ShoppingCart, category: "general", color: "#F97316" },

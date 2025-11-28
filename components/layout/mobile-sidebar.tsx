@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Menu, ChevronUp, LogOut, Loader2, User } from 'lucide-react';
+import { Menu, ChevronUp, LogOut, Loader2, User, PanelLeftClose } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/auth-context';
 import { useStore } from '@/store/useStore';
 import { QuickAccessSection } from './quick-access-section';
@@ -141,8 +141,8 @@ export function MobileSidebar() {
       </Button>
 
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetContent side="left" className="w-72 p-0">
-          <SheetHeader className="p-4 border-b">
+        <SheetContent side="left" className="w-72 p-0 [&>button]:hidden">
+          <SheetHeader className="p-4 border-b flex flex-row items-center justify-between space-y-0">
             <SheetTitle>
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -151,54 +151,64 @@ export function MobileSidebar() {
                 <span className="text-lg font-semibold">LinksVault</span>
               </div>
             </SheetTitle>
+            <SheetClose asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <PanelLeftClose className="h-5 w-5" />
+                <span className="sr-only">Close sidebar</span>
+              </Button>
+            </SheetClose>
             <SheetDescription className="sr-only">
               Navigation menu for LinksVault
             </SheetDescription>
           </SheetHeader>
 
           <div className="flex flex-col h-[calc(100vh-80px)]">
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-1">
-                {/* Quick Access */}
-                <QuickAccessSection onViewClick={handleViewClick} />
+            <div className="p-4 pb-0">
+              {/* Quick Access - Pinned */}
+              <QuickAccessSection onViewClick={handleViewClick} />
+            </div>
 
-                {/* Folders */}
+            <ScrollArea className="flex-1">
+              <div className="px-4 pb-4 space-y-1">
+                {/* Folders - Scrollable */}
                 <FoldersSection onFolderClick={handleFolderClick} />
               </div>
             </ScrollArea>
 
             {/* Profile Section */}
-            <div className="p-4 mt-auto">
+            <div className="p-2 mt-auto border-t border-border/40">
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   onClick={() => setIsProfileModalOpen(true)}
-                  className="flex-1 justify-start gap-3 h-auto p-3 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  className="flex-1 justify-start gap-3 h-auto p-2 hover:bg-muted/50 text-foreground"
                 >
                   <div className="flex size-8 items-center justify-center rounded-full bg-orange-500 text-black text-sm font-medium">
                     {displayName.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 text-left min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm truncate text-gray-600 dark:text-gray-400">{displayName}</span>
+                      <span className="font-medium text-sm truncate text-foreground">{displayName}</span>
                     </div>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">View profile</span>
+                    <span className="text-xs text-muted-foreground">View profile</span>
                   </div>
-                  <ChevronUp className="size-4 text-gray-600 dark:text-gray-400" />
+                  <ChevronUp className="size-4 text-muted-foreground" />
                 </Button>
                 <SheetClose asChild>
                   <Button
                     variant="ghost"
-                    className="w-full justify-start gap-3 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                    size="icon"
+                    className="h-10 w-10 text-destructive hover:text-destructive hover:bg-destructive/10"
                     onClick={handleLogout}
                     disabled={isLoggingOut}
+                    title="Logout"
                   >
                     {isLoggingOut ? (
                       <Loader2 className="size-4 animate-spin-gpu" />
                     ) : (
                       <LogOut className="size-4" />
                     )}
-                    <span>Logout</span>
+                    <span className="sr-only">Logout</span>
                   </Button>
                 </SheetClose>
               </div>

@@ -26,6 +26,7 @@ import { Link } from "@/types";
 import { getPlatformConfig } from "@/utils/platform";
 import { FolderBadge } from "./folder-badge";
 import { formatRelativeTime } from "@/utils/date";
+import { HighlightText } from "@/components/common/highlight-text";
 import { useToast } from "@/hooks/use-toast";
 import { usePerformanceMonitor } from "@/hooks/use-performance-monitor";
 import { logger } from "@/lib/utils/logger";
@@ -65,7 +66,7 @@ function LinkCardComponent({
   showActions = true
 }: LinkCardProps) {
   const { updateLink, deleteLink, restoreLink, permanentlyDeleteLink } = useLinksStore();
-  const { setEditingLink, setAddLinkModalOpen } = useUIStore();
+  const { setEditingLink, setAddLinkModalOpen, searchFilters } = useUIStore();
   const [imageError, setImageError] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { toast } = useToast();
@@ -125,7 +126,7 @@ function LinkCardComponent({
       });
 
       toast({
-        title: wasFavorite ? "Unfavorited" : "Favorited",
+        description: wasFavorite ? "Unfavorited" : "Favorited",
         variant: "success",
         icon: <Star className={`size-4 ${!wasFavorite ? 'fill-yellow-400 text-yellow-400' : ''}`} />,
       });
@@ -172,7 +173,7 @@ function LinkCardComponent({
       });
 
       toast({
-        title: "Deleted",
+        description: "Deleted",
         variant: "destructive",
         icon: <Trash className="size-4" />,
         action: (
@@ -180,7 +181,7 @@ function LinkCardComponent({
             variant="outline"
             size="sm"
             onClick={() => handleUndoDelete(linkId)}
-            className="h-6 px-2 text-xs bg-white text-black border-gray-300 hover:bg-gray-50 dark:bg-white dark:text-black dark:border-gray-300 dark:hover:bg-gray-50"
+            className="h-7 px-3 text-xs font-medium bg-white text-black border-white/20 hover:bg-white/90 dark:bg-white dark:text-black dark:border-white/20 dark:hover:bg-white/90 shrink-0"
           >
             Undo
           </Button>
@@ -491,14 +492,14 @@ function LinkCardComponent({
           {/* Title */}
           <div className="mb-2">
             <h3 className="line-clamp-1 text-xs sm:text-sm font-semibold leading-tight text-foreground pr-6">
-              {link.title || 'Untitled Link'}
+              <HighlightText text={link.title || 'Untitled Link'} highlight={searchFilters.query} />
             </h3>
           </div>
 
           {/* Description */}
           {link.description && (
             <p className="mb-2.5 line-clamp-2 text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
-              {link.description}
+              <HighlightText text={link.description} highlight={searchFilters.query} />
             </p>
           )}
 
@@ -509,7 +510,9 @@ function LinkCardComponent({
                 className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0"
                 style={{ color: platformConfig.color }}
               />
-              <span className="truncate capitalize font-medium">{link.platform}</span>
+              <span className="truncate capitalize font-medium">
+                <HighlightText text={link.platform} highlight={searchFilters.query} />
+              </span>
               {link.folderId && !isInTrash && (
                 <FolderBadge folderId={link.folderId} className="ml-1" />
               )}

@@ -81,7 +81,6 @@ export class SettingsDatabaseService {
 
       const settings: AppSettings = {
         theme: data.theme as 'light' | 'dark' | 'system',
-        viewMode: data.view_mode as 'grid' | 'list',
       };
 
       if (!isAppSettings(settings)) {
@@ -103,7 +102,7 @@ export class SettingsDatabaseService {
    * Update user settings
    */
   async updateSettings(settings: Partial<AppSettings>): Promise<AppSettings> {
-    let userId: string | undefined;
+    let userId = 'unknown';
     try {
       const { data: { user } } = await this.supabase.auth.getUser();
       if (!user) {
@@ -116,13 +115,11 @@ export class SettingsDatabaseService {
       const updateData: {
         user_id: string;
         theme?: string;
-        view_mode?: string;
       } = {
         user_id: user.id,
       };
-      
+
       if (settings.theme !== undefined) updateData.theme = settings.theme;
-      if (settings.viewMode !== undefined) updateData.view_mode = settings.viewMode;
 
       // Use proper upsert with conflict resolution
       const { data, error } = await this.supabase
@@ -141,7 +138,6 @@ export class SettingsDatabaseService {
             .from('user_settings')
             .update({
               theme: settings.theme,
-              view_mode: settings.viewMode,
             })
             .eq('user_id', user.id)
             .select()
@@ -156,37 +152,35 @@ export class SettingsDatabaseService {
 
           const result: AppSettings = {
             theme: updateDataResult.theme as 'light' | 'dark' | 'system',
-            viewMode: updateDataResult.view_mode as 'grid' | 'list',
           };
-          
+
           if (!isAppSettings(result)) {
             throw new DatabaseError('Invalid settings data received', { userId: user.id });
           }
-          
+
           return result;
         }
         throw new DatabaseError('Failed to update settings', { userId: user.id }, error as Error);
       }
-      
+
       if (!data) {
         throw new DatabaseError('Failed to update settings - no data returned', { userId: user.id });
       }
 
       const result: AppSettings = {
         theme: data.theme as 'light' | 'dark' | 'system',
-        viewMode: data.view_mode as 'grid' | 'list',
       };
-      
+
       if (!isAppSettings(result)) {
         throw new DatabaseError('Invalid settings data received', { userId: user.id });
       }
-      
+
       return result;
     } catch (error) {
       if (error instanceof DatabaseError || error instanceof AuthenticationError) {
         throw error;
       }
-      throw new DatabaseError('Failed to update settings', { userId: userId || 'unknown' }, error as Error);
+      throw new DatabaseError('Failed to update settings', { userId }, error as Error);
     }
   }
 
@@ -203,7 +197,7 @@ export class SettingsDatabaseService {
       .eq('user_id', user.id);
 
     if (error) throw error;
-    
+
     // Clear cache after mutation
     this.invalidateUserCache(user.id);
   }

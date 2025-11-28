@@ -28,7 +28,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   // Initial State
   settings: {
     theme: 'light', // Changed from 'system' to 'light' for better default UX
-    viewMode: 'grid',
   },
   isLoading: false,
   error: null,

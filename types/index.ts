@@ -45,10 +45,9 @@ export interface Folder {
 
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
-  viewMode: 'grid' | 'list';
 }
 
-export type Platform = 
+export type Platform =
   | 'youtube'
   | 'twitter'
   | 'instagram'
