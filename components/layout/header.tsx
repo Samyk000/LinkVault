@@ -6,20 +6,35 @@
  * @created 2025-10-18
  */
 
-import { Plus, Settings, Search } from "lucide-react";
+import { Plus, Settings, User, LogOut, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { useStore } from "@/store/useStore";
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { LazySettingsModal } from "@/components/lazy";
 import { usePerformanceMonitor } from "@/hooks/use-performance-monitor";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useLogout } from "@/hooks/use-logout";
+import { ProfileModal } from "@/components/modals/profile-modal";
 
 export function Header() {
   const setAddLinkModalOpen = useStore((state) => state.setAddLinkModalOpen);
-  const searchFilters = useStore((state) => state.searchFilters);
-  const setSearchFilters = useStore((state) => state.setSearchFilters);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const { user } = useAuth();
+  const { handleLogout, isLoggingOut } = useLogout();
+
+  // Get display name or fallback
+  const displayName = user?.profile?.display_name || user?.email?.split('@')[0] || 'User';
+  const userInitials = displayName.charAt(0).toUpperCase();
 
   // Performance monitoring
   const { trackMetric, trackInteraction, trackError } = usePerformanceMonitor({
@@ -28,32 +43,6 @@ export function Header() {
     trackInteractions: true,
     trackErrors: true
   });
-
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const startTime = performance.now();
-    const query = e.target.value;
-
-    try {
-      setSearchFilters({ query });
-
-      const duration = performance.now() - startTime;
-      trackMetric('search_input_time', duration, {
-        queryLength: query.length.toString(),
-        hasQuery: (!!query).toString()
-      });
-
-      trackInteraction('input', 'search_query', {
-        queryLength: query.length.toString(),
-        hasQuery: (!!query).toString(),
-        duration: duration.toString()
-      });
-    } catch (error) {
-      trackError('Search input error', {
-        action: 'search_input',
-        queryLength: query.length
-      });
-    }
-  }, [setSearchFilters, trackMetric, trackInteraction, trackError]);
 
   return (
     <>
@@ -75,20 +64,6 @@ export function Header() {
           {/* Spacer - Flexible */}
           <div className="flex-1" />
 
-          {/* Search Bar - Centered/Flexible */}
-          <div className="flex-1 max-w-sm mx-4">
-            <div className="relative">
-              <Search className="absolute left-2.5 sm:left-3 top-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-              <Input
-                type="text"
-                placeholder="Search links..."
-                value={searchFilters.query}
-                onChange={handleSearchChange}
-                className="pl-8 sm:pl-9 h-8 sm:h-9 w-full bg-muted/50 border-transparent focus:border-transparent focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors text-xs sm:text-sm"
-              />
-            </div>
-          </div>
-
           {/* Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Add Link - Hidden on mobile (FAB available) */}
@@ -99,24 +74,67 @@ export function Header() {
               <Plus className="h-4 w-4" />
               <span className="hidden lg:inline">Add Link</span>
             </Button>
-            {/* Settings - Mobile and Desktop (Rightmost) */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSettingsOpen(true)}
-              aria-label="Settings"
-              className="h-10 w-10 rounded-lg hover:bg-muted transition-colors"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
+
+            {/* Profile Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="relative h-10 w-10 rounded-full p-0 hover:bg-transparent"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-sm ring-2 ring-background transition-transform hover:scale-105">
+                    {userInitials}
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{displayName}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user?.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setIsProfileModalOpen(true)} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>My Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsSettingsOpen(true)} className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20"
+                >
+                  {isLoggingOut ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <LogOut className="mr-2 h-4 w-4" />
+                  )}
+                  <span>{isLoggingOut ? 'Logging out...' : 'Log out'}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
+
       {isSettingsOpen && (
         <React.Suspense fallback={<div className="sr-only">Loading settings...</div>}>
           <LazySettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
         </React.Suspense>
       )}
+
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
     </>
   );
 }

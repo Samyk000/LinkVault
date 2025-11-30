@@ -41,27 +41,27 @@ export const BulkActionBar = memo(function BulkActionBar({
   const [showMoveModal, setShowMoveModal] = useState(false);
 
   // Memoize selection state calculations
-  const allSelected = useMemo(() => 
+  const allSelected = useMemo(() =>
     selectedIds.length === totalVisibleItems && totalVisibleItems > 0,
     [selectedIds.length, totalVisibleItems]
   );
-  const someSelected = useMemo(() => 
+  const someSelected = useMemo(() =>
     selectedIds.length > 0 && selectedIds.length < totalVisibleItems,
     [selectedIds.length, totalVisibleItems]
   );
-  const noneSelected = useMemo(() => 
+  const noneSelected = useMemo(() =>
     selectedIds.length === 0,
     [selectedIds.length]
   );
 
   // Memoize selected links to prevent recalculation on every render
-  const selectedLinks = useMemo(() => 
+  const selectedLinks = useMemo(() =>
     links.filter(link => selectedIds.includes(link.id)),
     [links, selectedIds]
   );
 
   // Memoize has favorites check
-  const hasFavorites = useMemo(() => 
+  const hasFavorites = useMemo(() =>
     selectedLinks.some(link => link.isFavorite),
     [selectedLinks]
   );
@@ -85,7 +85,7 @@ export const BulkActionBar = memo(function BulkActionBar({
   const handleBulkFavorite = useCallback(async () => {
     try {
       const hasMixedStates = selectedLinks.some(link => link.isFavorite) &&
-                             selectedLinks.some(link => !link.isFavorite);
+        selectedLinks.some(link => !link.isFavorite);
 
       // If mixed states, favorite all; otherwise toggle based on first item's state
       const shouldFavorite = hasMixedStates ? true : !selectedLinks[0]?.isFavorite;
@@ -183,15 +183,11 @@ export const BulkActionBar = memo(function BulkActionBar({
       <div
         className={cn(
           "fixed top-16 sm:top-18 left-1/2 transform -translate-x-1/2 z-40",
-          "rounded-xl shadow-2xl px-4 py-3 flex items-center gap-3",
-          "min-w-[300px] sm:min-w-[360px] max-w-[95vw] border-2",
-          "border-border/50",
-          "!animate-in slide-in-from-top-2 fade-in duration-300"
+          "rounded-xl shadow-xl px-4 py-3 flex items-center gap-3",
+          "min-w-[300px] sm:min-w-[360px] max-w-[95vw] border",
+          "bg-background/95 backdrop-blur-sm border-border/50",
+          "animate-in slide-in-from-top-2 fade-in duration-300"
         )}
-        style={{
-          backgroundColor: theme.background,
-          borderColor: theme.border,
-        }}
       >
         {/* Action Buttons - First */}
         {/* Mobile: Vertical layout with text below icons */}
@@ -204,25 +200,13 @@ export const BulkActionBar = memo(function BulkActionBar({
               onClick={() => setShowMoveModal(true)}
               className={cn(
                 "h-10 w-10 rounded-lg p-0",
-                "transition-all duration-250 ease-in-out will-change-transform"
+                "transition-transform duration-200 active:scale-95 hover:bg-muted/50"
               )}
-              style={{
-                color: theme.button.text,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.button.hover;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
               aria-label="Move selected items"
             >
               <Folder className="size-4" />
             </Button>
-            <span
-              className="text-[10px] font-medium leading-tight"
-              style={{ color: theme.text }}
-            >
+            <span className="text-[10px] font-medium leading-tight text-muted-foreground">
               Move
             </span>
           </div>
@@ -235,25 +219,13 @@ export const BulkActionBar = memo(function BulkActionBar({
               onClick={handleBulkFavorite}
               className={cn(
                 "h-10 w-10 rounded-lg p-0",
-                "transition-all duration-250 ease-in-out will-change-transform"
+                "transition-transform duration-200 active:scale-95 hover:bg-muted/50"
               )}
-              style={{
-                color: theme.button.text,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.button.hover;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
               aria-label="Toggle favorite for selected items"
             >
               <Star className={`size-4 ${hasFavorites ? 'fill-yellow-400 text-yellow-400' : ''}`} />
             </Button>
-            <span
-              className="text-[10px] font-medium leading-tight"
-              style={{ color: theme.text }}
-            >
+            <span className="text-[10px] font-medium leading-tight text-muted-foreground">
               Favorite
             </span>
           </div>
@@ -266,25 +238,13 @@ export const BulkActionBar = memo(function BulkActionBar({
               onClick={handleBulkDelete}
               className={cn(
                 "h-10 w-10 rounded-lg p-0",
-                "transition-all duration-250 ease-in-out will-change-transform"
+                "transition-transform duration-200 active:scale-95 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
               )}
-              style={{
-                color: '#f87171', // Keep red color for delete button
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(248, 113, 113, 0.1)'; // red-400 with 10% opacity
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
               aria-label="Delete selected items"
             >
-              <Trash2 className="size-4" />
+              <Trash2 className="size-4 text-red-500" />
             </Button>
-            <span
-              className="text-[10px] font-medium leading-tight"
-              style={{ color: theme.text }}
-            >
+            <span className="text-[10px] font-medium leading-tight text-muted-foreground">
               Delete
             </span>
           </div>
@@ -299,17 +259,8 @@ export const BulkActionBar = memo(function BulkActionBar({
             onClick={() => setShowMoveModal(true)}
             className={cn(
               "gap-1.5 px-3 h-9 rounded-lg text-sm font-medium",
-              "transition-all duration-250 ease-in-out will-change-transform"
+              "transition-transform duration-200 active:scale-[0.98] hover:bg-muted/50"
             )}
-            style={{
-              color: theme.button.text,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.button.hover;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
             aria-label="Move selected items"
           >
             <Folder className="size-4" />
@@ -323,17 +274,8 @@ export const BulkActionBar = memo(function BulkActionBar({
             onClick={handleBulkFavorite}
             className={cn(
               "gap-1.5 px-3 h-9 rounded-lg text-sm font-medium",
-              "transition-all duration-250 ease-in-out will-change-transform"
+              "transition-transform duration-200 active:scale-[0.98] hover:bg-muted/50"
             )}
-            style={{
-              color: theme.button.text,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.button.hover;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
             aria-label="Toggle favorite for selected items"
           >
             <Star className={`size-4 ${hasFavorites ? 'fill-yellow-400 text-yellow-400' : ''}`} />
@@ -347,17 +289,8 @@ export const BulkActionBar = memo(function BulkActionBar({
             onClick={handleBulkDelete}
             className={cn(
               "gap-1.5 px-3 h-9 rounded-lg text-sm font-medium",
-              "transition-all duration-250 ease-in-out will-change-transform"
+              "transition-transform duration-200 active:scale-[0.98] hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 text-red-500"
             )}
-            style={{
-              color: '#f87171', // Keep red color for delete button
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(248, 113, 113, 0.1)'; // red-400 with 10% opacity
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
             aria-label="Delete selected items"
           >
             <Trash2 className="size-4" />
@@ -366,7 +299,7 @@ export const BulkActionBar = memo(function BulkActionBar({
         </div>
 
         {/* Divider - Mobile only */}
-        <div className="md:hidden h-7 w-px flex-shrink-0" style={{ backgroundColor: theme.divider }} />
+        <div className="md:hidden h-7 w-px bg-border/50 flex-shrink-0" />
 
         {/* Selection Count + Select All - Mobile grouped together */}
         <div className="md:hidden flex items-center gap-1 flex-shrink-0">
@@ -374,10 +307,7 @@ export const BulkActionBar = memo(function BulkActionBar({
           <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-1">
               {/* Selection Count */}
-              <div
-                className="text-xs font-medium tabular-nums opacity-80"
-                style={{ color: theme.text }}
-              >
+              <div className="text-xs font-medium tabular-nums opacity-80 text-muted-foreground">
                 <span>{selectedIds.length}</span>
               </div>
 
@@ -386,16 +316,7 @@ export const BulkActionBar = memo(function BulkActionBar({
                 variant="ghost"
                 size="icon"
                 onClick={handleSelectAll}
-                className="h-8 w-8 rounded-lg p-0 transition-colors"
-                style={{
-                  color: theme.button.text,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.button.hover;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
+                className="h-8 w-8 rounded-lg p-0 transition-transform duration-200 active:scale-95 hover:bg-muted/50"
                 aria-label="Select all visible items"
               >
                 {allSelected ? (
@@ -407,25 +328,19 @@ export const BulkActionBar = memo(function BulkActionBar({
             </div>
 
             {/* Text Label below both */}
-            <span
-              className="text-[10px] font-medium leading-tight"
-              style={{ color: theme.text }}
-            >
+            <span className="text-[10px] font-medium leading-tight text-muted-foreground">
               Select All
             </span>
           </div>
         </div>
 
         {/* Desktop Divider */}
-        <div className="hidden md:block h-7 w-px" style={{ backgroundColor: theme.divider }} />
+        <div className="hidden md:block h-7 w-px bg-border/50" />
 
         {/* Desktop Selection Count */}
         <div className="hidden md:block">
-          <div
-            className="flex items-center gap-2 text-xs font-medium flex-shrink-0 tabular-nums opacity-80"
-            style={{ color: theme.text }}
-          >
-            <span>{selectedIds.length}</span>
+          <div className="flex items-center gap-2 text-xs font-medium flex-shrink-0 tabular-nums opacity-80 text-muted-foreground">
+            <span>{selectedIds.length} selected</span>
           </div>
         </div>
 
@@ -438,30 +353,9 @@ export const BulkActionBar = memo(function BulkActionBar({
             }}
             onCheckedChange={handleSelectAll}
             aria-label="Select all visible items"
-            className="h-4 w-4 rounded border-2 data-[state=checked]:text-white dark:data-[state=checked]:text-black"
-            style={{
-              borderColor: theme.border,
-              backgroundColor: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              const checkbox = e.currentTarget as HTMLElement;
-              if (!allSelected) {
-                checkbox.style.backgroundColor = theme.button.hover;
-              }
-            }}
-            onMouseLeave={(e) => {
-              const checkbox = e.currentTarget as HTMLElement;
-              if (!allSelected) {
-                checkbox.style.backgroundColor = 'transparent';
-              }
-            }}
+            className="h-4 w-4 rounded border-2 data-[state=checked]:text-primary-foreground"
           />
-          <span
-            className="text-sm font-medium"
-            style={{
-              color: theme.text,
-            }}
-          >
+          <span className="text-sm font-medium text-muted-foreground">
             Select all
           </span>
         </div>
@@ -471,18 +365,7 @@ export const BulkActionBar = memo(function BulkActionBar({
           variant="ghost"
           size="icon"
           onClick={onClearSelection}
-          className="h-10 w-10 md:h-9 md:w-9 rounded-lg flex-shrink-0 ml-auto md:ml-0 transition-colors opacity-70 hover:opacity-100"
-          style={{
-            color: theme.button.text,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.button.hover;
-            e.currentTarget.style.opacity = '1';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.opacity = '0.7';
-          }}
+          className="h-10 w-10 md:h-9 md:w-9 rounded-lg flex-shrink-0 ml-auto md:ml-0 transition-transform duration-200 active:scale-95 opacity-70 hover:opacity-100 hover:bg-muted/50"
           aria-label="Clear selection"
         >
           <X className="size-4" />

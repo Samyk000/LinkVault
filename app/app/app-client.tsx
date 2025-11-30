@@ -7,8 +7,9 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useCallback, useDeferredValue } from "react";
-import { Star, Trash2, RotateCcw } from "lucide-react";
+import { Star, Trash2, RotateCcw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { usePerformanceMonitor } from "@/hooks/use-performance-monitor";
 import { Header } from "@/components/layout/header";
@@ -141,6 +142,32 @@ export function AppClient({ initialLinks = [], initialFolders = [] }: AppClientP
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }, [deferredLinks, deferredSelectedFolderId, deferredCurrentView, deferredSearchQuery, descendantFolderIds, isLoadingLinks, initialLinks.length]);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const startTime = performance.now();
+    const query = e.target.value;
+
+    try {
+      setSearchFilters({ query });
+
+      const duration = performance.now() - startTime;
+      trackMetric('search_input_time', duration, {
+        queryLength: query.length.toString(),
+        hasQuery: (!!query).toString()
+      });
+
+      trackInteraction('input', 'search_query', {
+        queryLength: query.length.toString(),
+        hasQuery: (!!query).toString(),
+        duration: duration.toString()
+      });
+    } catch (error) {
+      trackError('Search input error', {
+        action: 'search_input',
+        queryLength: query.length
+      });
+    }
+  }, [setSearchFilters, trackMetric, trackInteraction, trackError]);
 
   // Memoize callbacks
   const handleToggleSelect = useCallback((linkId: string) => {
@@ -292,6 +319,20 @@ export function AppClient({ initialLinks = [], initialFolders = [] }: AppClientP
                   <span className="text-sm sm:text-base text-muted-foreground flex-shrink-0 font-medium tabular-nums">
                     ({isLoadingLinks ? '...' : filteredLinks.length})
                   </span>
+                </div>
+
+                {/* Search Bar - Right aligned on desktop */}
+                <div className="w-full md:w-64 lg:w-72 md:order-2 relative z-10">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    <Input
+                      type="text"
+                      placeholder="Search links..."
+                      value={searchFilters.query}
+                      onChange={handleSearchChange}
+                      className="pl-9 h-9 w-full bg-background border-input focus:border-primary focus-visible:ring-1 focus-visible:ring-primary transition-all shadow-sm"
+                    />
+                  </div>
                 </div>
               </div>
 

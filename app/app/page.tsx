@@ -7,8 +7,9 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useCallback, useDeferredValue } from "react";
-import { Star, Trash2, RotateCcw } from "lucide-react";
+import { Star, Trash2, RotateCcw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { usePerformanceMonitor } from "@/hooks/use-performance-monitor";
 import { Header } from "@/components/layout/header";
@@ -315,12 +316,23 @@ export default function AppPage() {
                     {isLoadingData ? 'Loading...' : pageTitle}
                   </h1>
                   <span className="text-sm sm:text-base text-muted-foreground flex-shrink-0 font-medium tabular-nums">
-                    {isLoadingData ? '...' : `(${filteredLinks.length})`}
+                    ({isLoadingData ? '...' : filteredLinks.length})
                   </span>
                 </div>
 
-                {/* Search Bar + View Toggle - First on mobile, right on desktop */}
-
+                {/* Search Bar - Right aligned on desktop */}
+                <div className="w-full md:w-64 lg:w-72 md:order-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    <Input
+                      type="text"
+                      placeholder="Search links..."
+                      value={searchFilters.query}
+                      onChange={handleSearchChange}
+                      className="pl-9 h-9 w-full bg-background border-input focus:border-primary focus-visible:ring-1 focus-visible:ring-primary transition-all shadow-sm"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Trash Actions Row - Only in trash view, below view toggle */}

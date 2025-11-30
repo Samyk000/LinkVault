@@ -94,7 +94,7 @@ export function FolderItem({ folder, isSubFolder = false, onFolderClick }: Folde
             <TooltipTrigger asChild>
               <Button
                 variant={selectedFolderId === folder.id && currentView === 'all' ? "secondary" : "ghost"}
-                className={`absolute ${hasSubFolders ? 'left-6' : 'left-0'} top-0 ${isSubFolder ? 'h-8' : 'h-8'} justify-start`}
+                className={`absolute ${hasSubFolders ? 'left-6' : 'left-0'} top-0 ${isSubFolder ? 'h-8' : 'h-8'} justify-start active:scale-[0.98] transition-transform`}
                 style={{ width: hasSubFolders ? 'calc(100% - 24px - 60px)' : 'calc(100% - 60px)' }}
                 onClick={handleClick}
               >
@@ -219,7 +219,7 @@ export function QuickAccessNav({ allLinksCount, favoritesCount, trashCount, onVi
     <nav className="space-y-1">
       <Button
         variant={currentView === 'all' && selectedFolderId === null ? "secondary" : "ghost"}
-        className="w-full justify-between gap-2 h-8 px-2"
+        className="w-full justify-between gap-2 h-8 px-2 active:scale-[0.98] transition-transform"
         onClick={() => handleViewClick('all')}
       >
         <div className="flex items-center gap-2">
@@ -230,7 +230,7 @@ export function QuickAccessNav({ allLinksCount, favoritesCount, trashCount, onVi
       </Button>
       <Button
         variant={currentView === 'favorites' ? "secondary" : "ghost"}
-        className="w-full justify-between gap-2 h-8 px-2"
+        className="w-full justify-between gap-2 h-8 px-2 active:scale-[0.98] transition-transform"
         onClick={() => handleViewClick('favorites')}
       >
         <div className="flex items-center gap-2">
@@ -241,7 +241,7 @@ export function QuickAccessNav({ allLinksCount, favoritesCount, trashCount, onVi
       </Button>
       <Button
         variant={currentView === 'trash' ? "secondary" : "ghost"}
-        className="w-full justify-between gap-2 h-8 px-2"
+        className="w-full justify-between gap-2 h-8 px-2 active:scale-[0.98] transition-transform"
         onClick={() => handleViewClick('trash')}
       >
         <div className="flex items-center gap-2">

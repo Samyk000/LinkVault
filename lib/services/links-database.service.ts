@@ -5,7 +5,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client';
-import { Link } from '@/types';
+import { Link, Platform } from '@/types';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { globalCache, CACHE_CONFIGS } from './cache-manager';
 import { debugLogger } from './debug-logger.service';
@@ -407,8 +407,6 @@ export class LinksDatabaseService {
 
       if (ids.length === 0) return [];
 
-      // Cache invalidation moved to after success
-
       const updateData: LinkUpdateData & { updated_at: string } = {
         updated_at: new Date().toISOString(),
       };
@@ -434,11 +432,12 @@ export class LinksDatabaseService {
       if (error) {
         throw new DatabaseError('Failed to bulk update links', { linkIds: ids }, error as Error);
       }
+
       if (!data || data.length === 0) {
-        throw new DatabaseError('Failed to bulk update links - no data returned', { linkIds: ids });
+        logger.warn('Bulk update matched 0 rows', { ids, userId: user.id });
+        throw new DatabaseError('No links were updated. Please try again.', { linkIds: ids });
       }
 
-      // Validate and transform results
       // Validate and transform results
       const links = data.map((dbLink: DatabaseLink) => {
         const link = this.transformLinkFromDB(dbLink);
@@ -473,18 +472,28 @@ export class LinksDatabaseService {
 
       if (ids.length === 0) return;
 
-      const { error } = await this.supabase
+      logger.debug('Bulk deleting links:', { userId: user.id, count: ids.length, ids });
+
+      const { error, data } = await this.supabase
         .from('links')
         .update({
           deleted_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .in('id', ids)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select('id');
 
       if (error) {
         throw new DatabaseError('Failed to bulk delete links', { linkIds: ids }, error as Error);
       }
+
+      if (!data || data.length === 0) {
+        logger.warn('Bulk delete matched 0 rows', { ids, userId: user.id });
+        throw new DatabaseError('No links were deleted. Please try again.', { linkIds: ids });
+      }
+
+      logger.debug('Bulk delete result:', { count: data.length });
 
       // Invalidate cache after successful bulk deletion
       this.invalidateUserCache(user.id);
@@ -509,17 +518,23 @@ export class LinksDatabaseService {
 
       if (ids.length === 0) return;
 
-      const { error } = await this.supabase
+      const { error, data } = await this.supabase
         .from('links')
         .update({
           deleted_at: null,
           updated_at: new Date().toISOString()
         })
         .in('id', ids)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select('id');
 
       if (error) {
         throw new DatabaseError('Failed to bulk restore links', { linkIds: ids }, error as Error);
+      }
+
+      if (!data || data.length === 0) {
+        logger.warn('Bulk restore matched 0 rows', { ids, userId: user.id });
+        throw new DatabaseError('No links were restored. Please try again.', { linkIds: ids });
       }
 
       // Invalidate cache after successful bulk restoration
@@ -622,7 +637,7 @@ export class LinksDatabaseService {
       description: dbLink.description || '',
       thumbnail: dbLink.thumbnail || '',
       faviconUrl: dbLink.favicon_url || '',
-      platform: dbLink.platform as any,
+      platform: dbLink.platform as Platform,
       folderId: dbLink.folder_id,
       isFavorite: dbLink.is_favorite || false,
       tags: dbLink.tags || [],
