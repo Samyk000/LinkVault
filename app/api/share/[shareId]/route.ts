@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ shareId: string }> }
 ) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { shareId } = await params;
 
     // Get folder and links for sharing
