@@ -74,7 +74,7 @@ export function FoldersSection({ onFolderClick }: FoldersSectionProps) {
           <Plus className="h-4 w-4 text-primary" />
         </Button>
       </div>
-      
+
       {/* Show folder content - never show empty state during loading */}
       {folders.length > 0 ? (
         <nav className="space-y-0.5">

@@ -134,9 +134,28 @@ export function StoreInitializer() {
           }
         } else {
           // Standard session validation for desktop
-          const { data: { session }, error } = await createClient().auth.getSession();
-          if (error || !session) {
-            logger.warn('Desktop session validation failed, skipping data load');
+          // RETRY LOGIC: Try to get session multiple times if it fails initially
+          // This fixes race conditions where useAuth has user (from SSR) but client SDK isn't ready
+          let session = null;
+          const maxRetries = 3;
+
+          for (let i = 0; i < maxRetries; i++) {
+            const { data: { session: currentSession }, error } = await createClient().auth.getSession();
+
+            if (currentSession && !error) {
+              session = currentSession;
+              break;
+            }
+
+            // If we have a user but no session, wait and retry
+            if (user && i < maxRetries - 1) {
+              logger.debug(`Session not ready yet, retrying (${i + 1}/${maxRetries})...`);
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          }
+
+          if (!session) {
+            logger.warn('Desktop session validation failed after retries, skipping data load');
             setHydrated(true);
             return;
           }
@@ -154,7 +173,7 @@ export function StoreInitializer() {
     const loadDataFromSupabase = async () => {
       try {
         logger.debug('Loading data from Supabase...');
-        
+
         // Load all data in parallel
         const [settingsResult, foldersResult, linksResult] = await Promise.allSettled([
           supabaseDatabaseService.getSettings(),
@@ -163,14 +182,14 @@ export function StoreInitializer() {
         ]);
 
         // Extract results with fallbacks
-        const settings: AppSettings = settingsResult.status === 'fulfilled' && settingsResult.value 
-          ? settingsResult.value 
+        const settings: AppSettings = settingsResult.status === 'fulfilled' && settingsResult.value
+          ? settingsResult.value
           : DEFAULT_SETTINGS;
-        const folders: Folder[] = foldersResult.status === 'fulfilled' && foldersResult.value 
-          ? foldersResult.value 
+        const folders: Folder[] = foldersResult.status === 'fulfilled' && foldersResult.value
+          ? foldersResult.value
           : [];
-        const links: Link[] = linksResult.status === 'fulfilled' && linksResult.value 
-          ? linksResult.value 
+        const links: Link[] = linksResult.status === 'fulfilled' && linksResult.value
+          ? linksResult.value
           : [];
 
         logger.debug(`Loaded ${links.length} links, ${folders.length} folders`);
@@ -194,33 +213,33 @@ export function StoreInitializer() {
       // OPTIMIZED: Set hydrated immediately to allow instant UI render
       // This ensures LCP happens as fast as possible
       setHydrated(true);
-      
+
       // NEW: Set data loading state to true
       setIsLoadingData(true);
-      
+
       // OPTIMIZED: Use requestIdleCallback if available for even better performance
       // Otherwise use setTimeout(0) to defer to next tick
       // CRITICAL: Defer data loading to prevent blocking LCP
       const deferLoad = typeof window !== 'undefined' && 'requestIdleCallback' in window
         ? (fn: () => void) => {
-            (window as any).requestIdleCallback(fn, { timeout: 200 });
-          }
+          (window as any).requestIdleCallback(fn, { timeout: 200 });
+        }
         : (fn: () => void) => setTimeout(fn, 0);
-      
+
       // Load data in background without blocking - deferred to next tick
       deferLoad(async () => {
         try {
           await loadDataFromSupabase();
         } catch (error) {
           logger.error('Failed to load initial data:', error);
-          
+
           // Enhanced error recovery with progressive fallbacks
           try {
             logger.debug('Attempting enhanced fallback data load...');
-            
+
             // Try to load individual components that might still work
             const supabase = createClient();
-            
+
             supabase.auth.getUser().then(async (response: AuthResponse) => {
               const authUser = response.data.user;
               if (!authUser) {
@@ -230,28 +249,28 @@ export function StoreInitializer() {
                 setSettings(DEFAULT_SETTINGS);
                 return;
               }
-              
+
               // OPTIMIZED: Load all data in parallel with individual error handling
               const [settingsResult, foldersResult, linksResult] = await Promise.allSettled([
                 supabaseDatabaseService.getSettings().catch(() => null),
                 supabaseDatabaseService.getFolders().catch(() => []),
                 Promise.race([
                   supabaseDatabaseService.getLinks(),
-                  new Promise<never>((_, reject) => 
+                  new Promise<never>((_, reject) =>
                     setTimeout(() => reject(new Error('Links fallback timeout')), 5000)
                   )
                 ]).catch(() => [])
               ]);
 
               // Extract results with fallbacks
-              const settings: AppSettings = settingsResult.status === 'fulfilled' && settingsResult.value 
-                ? settingsResult.value 
+              const settings: AppSettings = settingsResult.status === 'fulfilled' && settingsResult.value
+                ? settingsResult.value
                 : DEFAULT_SETTINGS;
-              const folders: Folder[] = foldersResult.status === 'fulfilled' && foldersResult.value 
-                ? foldersResult.value 
+              const folders: Folder[] = foldersResult.status === 'fulfilled' && foldersResult.value
+                ? foldersResult.value
                 : [];
-              const links: Link[] = linksResult.status === 'fulfilled' && linksResult.value 
-                ? linksResult.value 
+              const links: Link[] = linksResult.status === 'fulfilled' && linksResult.value
+                ? linksResult.value
                 : [];
 
               logger.debug(`Fallback load: ${links.length} links, ${folders.length} folders, settings: ${settings ? 'loaded' : 'default'}`);
@@ -261,23 +280,23 @@ export function StoreInitializer() {
               setLinks(links || []);
               setFolders(folders || []);
               setSettings(settings || DEFAULT_SETTINGS);
-              
+
               logger.debug('Enhanced fallback load completed with partial data');
             }).catch((fallbackError: unknown) => {
               logger.error('Enhanced fallback load also failed:', fallbackError);
-              
+
               // Final safety net: ensure app doesn't get stuck
               setHydrated(true);
               setLinks([]);
               setFolders([]);
               setSettings(DEFAULT_SETTINGS);
-              
+
               logger.debug('Safety net activated - app ready with minimal state');
             });
           } catch (fallbackError: unknown) {
             logger.error('Fallback initialization failed:', fallbackError);
           }
-          
+
           // Track the error for monitoring
           performanceMonitor.trackError({
             message: `Store initialization failed: ${(error as Error).message}`,
@@ -288,7 +307,7 @@ export function StoreInitializer() {
               fallbackUsed: true
             }
           });
-          
+
           // Reset hasLoaded to allow retry on next auth change
           hasLoaded.current = false;
         } finally {
@@ -309,7 +328,7 @@ export function StoreInitializer() {
     let isComponentMounted = true;
     let retryCount = 0;
     const maxRetries = 3;
-    
+
     const setupSubscriptions = () => {
       if (!isComponentMounted) return;
 
@@ -333,7 +352,7 @@ export function StoreInitializer() {
         // OPTIMIZED: Gracefully handle subscription failures
         // App continues to work without realtime updates
         logger.warn('Real-time subscriptions unavailable, app will continue without live updates:', error);
-        
+
         // OPTIMIZED: Don't retry aggressively - realtime is not critical
         // App will refetch data on navigation/refresh
         if (retryCount === 0 && isComponentMounted) {
@@ -355,15 +374,15 @@ export function StoreInitializer() {
     // Cleanup subscriptions on unmount
     return () => {
       isComponentMounted = false;
-      
+
       if (subscriptionTimeout) {
         clearTimeout(subscriptionTimeout);
       }
-      
+
       if (retryTimeout) {
         clearTimeout(retryTimeout);
       }
-      
+
       // Safely cleanup subscriptions
       try {
         if (unsubscribeLinks) {
@@ -372,9 +391,9 @@ export function StoreInitializer() {
         if (unsubscribeFolders) {
           unsubscribeFolders();
         }
-        } catch (error) {
-          logger.error('Error cleaning up subscriptions:', error);
-        }
+      } catch (error) {
+        logger.error('Error cleaning up subscriptions:', error);
+      }
     };
   }, [user, authLoading, setLinks, setFolders, setSettings, loadSettings, setHydrated, setIsLoadingData]);
 
