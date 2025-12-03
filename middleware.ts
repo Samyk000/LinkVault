@@ -207,7 +207,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     // BUT: Don't redirect if we're already on login page (prevents redirect loops)
     // Note: Free users are handled client-side via localStorage, so we check for the cookie
     const isFreeUser = request.cookies.get('linksvault_free_user')?.value === 'true';
-    
+
     if (!isAuthenticated && !isFreeUser && requiresAuth(pathname) && !isAuthPage(pathname)) {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirectTo', pathname);
@@ -278,6 +278,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder files
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
