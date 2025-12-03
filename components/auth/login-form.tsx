@@ -18,9 +18,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/lib/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
-import { Eye, EyeOff, Mail, Lock, User, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, AlertCircle, Loader2, CheckCircle, HardDrive } from 'lucide-react';
 import type { SignInData, SignUpData } from '@/lib/types/auth';
 import { AUTH_CONSTANTS, AUTH_ERROR_MESSAGES } from '@/constants/auth.constants';
+import { FreeUserWarningModal } from '@/components/modals/free-user-warning-modal';
 
 interface FormErrors {
   email?: string;
@@ -37,22 +38,31 @@ interface FormErrors {
 export function LoginForm(): React.JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signIn, signUp, error, loading, clearError, user } = useAuth();
+  const { signIn, signUp, error, loading, clearError, user, isFreeUser, signInAsFreeUser } = useAuth();
   const { toast } = useToast();
 
-  // Redirect if already logged in
+  // Redirect if already logged in (including free user mode)
+  // Only redirect after auth has finished loading to prevent premature redirects
   useEffect(() => {
-    if (!loading && user) {
+    // Wait for auth to finish loading before checking redirect
+    if (loading) {
+      return;
+    }
+    
+    // Only redirect if user is authenticated or in free user mode
+    if (user || isFreeUser) {
       const redirectTo = searchParams?.get('redirectTo') || '/app';
       router.replace(redirectTo);
     }
-  }, [user, loading, router, searchParams]);
+  }, [user, isFreeUser, loading, router, searchParams]);
 
   // Form state
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isSigningInAsFreeUser, setIsSigningInAsFreeUser] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
+  const [showFreeUserWarning, setShowFreeUserWarning] = useState(false);
 
   // Handle URL tab parameter
   useEffect(() => {
@@ -622,6 +632,52 @@ export function LoginForm(): React.JSX.Element {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Free User Option */}
+      <div className="w-full max-w-md mx-auto mt-6 text-center">
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-gray-50 px-2 text-gray-500 font-mono">Or</span>
+          </div>
+        </div>
+        
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full mt-6 h-12 border-2 border-gray-300 hover:border-[#FF4D00] bg-white text-gray-700 hover:text-[#FF4D00] font-mono font-bold uppercase tracking-wider text-sm rounded-none transition-all duration-300"
+          onClick={() => setShowFreeUserWarning(true)}
+          disabled={isSigningIn || isSigningUp || isSigningInAsFreeUser}
+        >
+          <HardDrive className="mr-2 size-4" />
+          Continue as Free User
+        </Button>
+        
+        <p className="mt-3 text-xs text-gray-500 font-mono">
+          No account needed • Data stored locally
+        </p>
+      </div>
+
+      {/* Free User Warning Modal */}
+      <FreeUserWarningModal
+        isOpen={showFreeUserWarning}
+        isLoading={isSigningInAsFreeUser}
+        onConfirm={async () => {
+          setIsSigningInAsFreeUser(true);
+          try {
+            signInAsFreeUser();
+            // Small delay to show loading state
+            await new Promise(resolve => setTimeout(resolve, 300));
+            router.push('/app');
+          } finally {
+            setIsSigningInAsFreeUser(false);
+            setShowFreeUserWarning(false);
+          }
+        }}
+        onCancel={() => setShowFreeUserWarning(false)}
+      />
     </>
   );
 }

@@ -84,6 +84,15 @@ function requiresAuth(pathname: string): boolean {
 }
 
 /**
+ * Check if the path is a share route (cloud-only feature)
+ * @param {string} pathname - Request pathname
+ * @returns {boolean} Whether it's a share route
+ */
+function isShareRoute(pathname: string): boolean {
+  return pathname.startsWith('/share/folder/') || pathname.startsWith('/app/share');
+}
+
+/**
  * Check if the path is an auth page
  * @param {string} pathname - Request pathname
  * @returns {boolean} Whether it's an auth page
@@ -196,10 +205,19 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
     // Handle unauthenticated users trying to access protected pages
     // BUT: Don't redirect if we're already on login page (prevents redirect loops)
-    if (!isAuthenticated && requiresAuth(pathname) && !isAuthPage(pathname)) {
+    // Note: Free users are handled client-side via localStorage, so we check for the cookie
+    const isFreeUser = request.cookies.get('linksvault_free_user')?.value === 'true';
+    
+    if (!isAuthenticated && !isFreeUser && requiresAuth(pathname) && !isAuthPage(pathname)) {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirectTo', pathname);
       return NextResponse.redirect(loginUrl);
+    }
+
+    // Block free users from accessing share routes (cloud-only feature)
+    if (isFreeUser && isShareRoute(pathname)) {
+      // Redirect free users away from share routes to the main app
+      return NextResponse.redirect(new URL('/app', request.url));
     }
 
     // CRITICAL: Allow authenticated users to access /app without redirecting

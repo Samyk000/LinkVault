@@ -2,7 +2,7 @@
  * @file store/useSettingsStore.ts
  * @description User settings state management
  * @created 2025-11-12
- * @modified 2025-11-12
+ * @modified 2025-12-03
  */
 
 import { create } from 'zustand';
@@ -10,6 +10,7 @@ import { AppSettings } from '@/types';
 import { supabaseDatabaseService } from '@/lib/services/supabase-database.service';
 import { sanitizeSettingsData } from '@/lib/utils/sanitization';
 import { logger } from '@/lib/utils/logger';
+import { getStorageService, isFreeUser } from '@/lib/services/storage-provider';
 
 interface SettingsState {
   // State
@@ -39,7 +40,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setSettings: (settings) => set({ settings }),
 
   /**
-   * Loads user settings from database
+   * Loads user settings from storage (local or Supabase)
    * @returns {Promise<void>}
    * @throws {Error} When settings load fails
    */
@@ -47,7 +48,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const settings = await supabaseDatabaseService.getSettings();
+      const storageService = getStorageService();
+      const settings = await storageService.getSettings();
 
       if (settings) {
         set({
@@ -63,7 +65,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         });
       }
 
-      logger.debug('Settings loaded successfully');
+      logger.debug(`Settings loaded successfully from ${isFreeUser() ? 'localStorage' : 'Supabase'}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load settings';
 
@@ -106,7 +108,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       set({ settings: updatedSettings });
 
       // ENHANCED: Add timeout protection to prevent hanging updates
-      const updatePromise = supabaseDatabaseService.updateSettings(sanitizedUpdates);
+      const storageService = getStorageService();
+      const updatePromise = storageService.updateSettings(sanitizedUpdates);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Update settings timeout - please check your connection and try again')), 8000)
       );

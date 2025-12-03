@@ -7,7 +7,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useCallback, useDeferredValue } from "react";
-import { Star, Trash2, RotateCcw, Search } from "lucide-react";
+import { Star, Trash2, RotateCcw, Search, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -40,14 +40,15 @@ import { useRouter } from "next/navigation";
  */
 export default function AppPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isFreeUser } = useAuth();
 
   // Redirect to login if not authenticated (edge case: session expired during use)
+  // Skip redirect for free users who use local storage
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user && !isFreeUser) {
       router.replace('/login?expired=true');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, isFreeUser, router]);
 
   // Use selective store selectors with shallow comparison to minimize re-renders
   const links = useStore((state) => state.links);
@@ -364,11 +365,8 @@ export default function AppPage() {
               )}
             </div>
             {/* Show skeleton loading ONLY for the content area, not the persistent UI */}
-            {isLoadingData || (filteredLinks.length === 0 && folders.length === 0 && deferredLinks.length === 0) ? (
-              // Show skeleton loading when:
-              // 1. Data is actively loading (isLoadingData)
-              // 2. OR no data has loaded yet (no links, no folders, no deferred links)
-              // This ensures skeleton loading shows until actual user data is available
+            {isLoadingData ? (
+              // Show skeleton loading only when data is actively loading
               <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {Array.from({ length: 12 }).map((_, i) => (
                   <div key={i} className="rounded-lg border bg-card overflow-hidden">
@@ -395,8 +393,8 @@ export default function AppPage() {
               />
             ) : filteredLinks.length === 0 ? (
               <EmptyState
-                icon={deferredCurrentView === 'favorites' ? Star : Trash2}
-                title={deferredCurrentView === 'favorites' ? "No favorites yet" : "No links found"}
+                icon={deferredCurrentView === 'favorites' ? Star : Link2}
+                title={deferredCurrentView === 'favorites' ? "No favorites yet" : "No links yet"}
                 description={
                   deferredCurrentView === 'favorites'
                     ? "Click the star icon on any link card to mark it as a favorite and see it here."
