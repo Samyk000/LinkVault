@@ -138,7 +138,7 @@ const nextConfig: NextConfig = {
     // OPTIMIZED: Limit concurrent image optimization requests
     domains: [], // Deprecated, use remotePatterns instead
   },
-  
+
   // OPTIMIZED: Webpack optimization for bundle size
   webpack: (config, { isServer, dev }) => {
     // Fix for "File is not defined" error in serverless functions
@@ -159,7 +159,7 @@ const nextConfig: NextConfig = {
         'process': 'process/browser',
       };
     }
-    
+
     // BUNDLE OPTIMIZED: Advanced chunk splitting to reduce main bundle
     if (!dev && !isServer) {
       config.optimization = {
@@ -174,7 +174,7 @@ const nextConfig: NextConfig = {
           cacheGroups: {
             default: false,
             vendors: false,
-            
+
             // BUNDLE OPTIMIZED: Very high priority for large vendor libraries
             'supabase-vendor': {
               test: /[\\/]node_modules[\\/](@supabase)[\\/]/,
@@ -183,7 +183,7 @@ const nextConfig: NextConfig = {
               priority: 50,
               enforce: true,
             },
-            
+
             // BUNDLE OPTIMIZED: Radix UI - separate chunk with high priority
             'radix-vendor': {
               test: /[\\/]node_modules[\\/](@radix-ui)[\\/]/,
@@ -192,7 +192,7 @@ const nextConfig: NextConfig = {
               priority: 45,
               enforce: true,
             },
-            
+
             // BUNDLE OPTIMIZED: React ecosystem - separate chunk
             'react-vendor': {
               test: /[\\/]node_modules[\\/](react|react-dom|react-router)[\\/]/,
@@ -201,7 +201,7 @@ const nextConfig: NextConfig = {
               priority: 40,
               enforce: true,
             },
-            
+
             // BUNDLE OPTIMIZED: UI components and utils
             'ui-vendor': {
               test: /[\\/]node_modules[\\/](class-variance-authority|clsx|tailwind-merge|lucide-react)[\\/]/,
@@ -210,7 +210,7 @@ const nextConfig: NextConfig = {
               priority: 35,
               enforce: true,
             },
-            
+
             // BUNDLE OPTIMIZED: Forms and validation
             'forms-vendor': {
               test: /[\\/]node_modules[\\/](react-hook-form|@hookform|zod)[\\/]/,
@@ -219,7 +219,7 @@ const nextConfig: NextConfig = {
               priority: 30,
               enforce: true,
             },
-            
+
             // Common chunk for shared app code with higher threshold
             common: {
               name: 'common',
@@ -233,28 +233,28 @@ const nextConfig: NextConfig = {
         },
       };
     }
-    
+
     // Optimize webpack cache
     if (config.cache && typeof config.cache === 'object') {
       config.cache.maxMemoryGenerations = 1;
       config.cache.maxAge = 1000 * 60 * 60 * 24; // 24 hours
     }
-    
+
     return config;
   },
-  
+
   // OPTIMIZED: Production optimizations
   productionBrowserSourceMaps: false, // Disable source maps in production
   poweredByHeader: false, // Remove X-Powered-By header
   compress: true, // Enable gzip compression
-  
+
   // OPTIMIZED: Compiler options
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? {
       exclude: ['error', 'warn'], // Keep error and warn logs
     } : false,
   },
-  
+
   // Ensure API routes work properly on Netlify
   experimental: {
     serverActions: {
@@ -265,12 +265,12 @@ const nextConfig: NextConfig = {
     // OPTIMIZED: Enable partial prerendering (Next.js 14+)
     // ppr: true, // Uncomment when stable
   },
-  
+
   // OPTIMIZED: Remove standalone output for Netlify compatibility
   // output: 'standalone', // Commented out - causes routing issues on Netlify
 
   // CRITICAL: Add Netlify-specific configurations
-  trailingSlash: true, // Required for Netlify routing
+  trailingSlash: false, // Changed to false to fix sitemap.xml and robots.txt 404s
 
 };
 
