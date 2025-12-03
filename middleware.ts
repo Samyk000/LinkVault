@@ -100,10 +100,12 @@ function isAuthPage(pathname: string): boolean {
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for static files and API routes (except auth)
+  // Skip middleware for static files, API routes (except auth), and SEO files
   if (
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/api/') && !pathname.startsWith('/api/auth') ||
+    pathname === '/sitemap.xml' ||
+    pathname === '/robots.txt' ||
     pathname.includes('.') && !pathname.endsWith('.html')
   ) {
     return NextResponse.next();
@@ -258,8 +260,10 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - sitemap.xml (SEO)
+     * - robots.txt (SEO)
      * - public folder files
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap\\.xml|robots\\.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
