@@ -2,15 +2,13 @@
  * @file store/useAuthStore.ts
  * @description Authentication state management
  * @created 2025-11-12
- * @modified 2025-12-03
+ * @modified 2025-11-12
  */
 
 import { create } from 'zustand';
 import { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/utils/logger';
-import { STORAGE_KEYS } from '@/lib/services/storage.interface';
-import { setFreeUserFlag, isFreeUser } from '@/lib/services/storage-provider';
 
 const supabase = createClient();
 
@@ -20,7 +18,6 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  isFreeUser: boolean;
   
   // Actions
   signIn: (email: string, password: string) => Promise<void>;
@@ -28,11 +25,6 @@ interface AuthState {
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
   clearError: () => void;
-  
-  // Free User Actions
-  signInAsFreeUser: () => void;
-  signOutFreeUser: () => void;
-  initializeFreeUserSession: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -41,7 +33,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   error: null,
-  isFreeUser: false,
   
   /**
    * Signs in a user with email and password
@@ -234,61 +225,5 @@ export const useAuthStore = create<AuthState>((set, get) => ({
    */
   clearError: () => {
     set({ error: null });
-  },
-  
-  /**
-   * Signs in as a free user (local storage mode)
-   * Sets the free user flag in localStorage and updates state
-   */
-  signInAsFreeUser: () => {
-    setFreeUserFlag(true);
-    
-    set({
-      user: null,
-      isAuthenticated: true,
-      isFreeUser: true,
-      isLoading: false,
-      error: null,
-    });
-    
-    logger.info('User signed in as free user (local mode)');
-  },
-  
-  /**
-   * Signs out from free user mode
-   * Clears the session flag but preserves locally stored data
-   */
-  signOutFreeUser: () => {
-    setFreeUserFlag(false);
-    
-    set({
-      user: null,
-      isAuthenticated: false,
-      isFreeUser: false,
-      isLoading: false,
-      error: null,
-    });
-    
-    logger.info('Free user signed out (data preserved)');
-  },
-  
-  /**
-   * Initializes free user session on app load
-   * Checks localStorage for existing free user flag and restores session
-   */
-  initializeFreeUserSession: () => {
-    const freeUserActive = isFreeUser();
-    
-    if (freeUserActive) {
-      set({
-        user: null,
-        isAuthenticated: true,
-        isFreeUser: true,
-        isLoading: false,
-        error: null,
-      });
-      
-      logger.info('Free user session restored from localStorage');
-    }
   },
 }));

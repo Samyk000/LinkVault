@@ -2,7 +2,7 @@
  * @file store/useFoldersStore.ts
  * @description Folder state management
  * @created 2025-11-12
- * @modified 2025-12-03
+ * @modified 2025-11-12
  */
 
 import { create } from 'zustand';
@@ -10,7 +10,6 @@ import { Folder } from '@/types';
 import { supabaseDatabaseService } from '@/lib/services/supabase-database.service';
 import { sanitizeFolderData } from '@/lib/utils/sanitization';
 import { logger } from '@/lib/utils/logger';
-import { getStorageService } from '@/lib/services/storage-provider';
 
 interface FoldersState {
   // State
@@ -79,8 +78,7 @@ export const useFoldersStore = create<FoldersState>((set, get) => ({
       set((state) => ({ folders: [...state.folders, tempFolder] }));
 
       // ENHANCED: Add timeout protection with better error message
-      const storageService = getStorageService();
-      const savePromise = storageService.addFolder(sanitizedData);
+      const savePromise = supabaseDatabaseService.addFolder(sanitizedData);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Folder creation timeout - please check your connection and try again')), 5000)
       );
@@ -139,8 +137,7 @@ export const useFoldersStore = create<FoldersState>((set, get) => ({
       }));
 
       // ENHANCED: Add timeout protection with better error message
-      const storageService = getStorageService();
-      const updatePromise = storageService.updateFolder(id, sanitizedUpdates);
+      const updatePromise = supabaseDatabaseService.updateFolder(id, sanitizedUpdates);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Update folder timeout - please check your connection and try again')), 10000)
       );
@@ -190,8 +187,7 @@ export const useFoldersStore = create<FoldersState>((set, get) => ({
       }));
 
       // ENHANCED: Add timeout protection with better error message
-      const storageService = getStorageService();
-      const deletePromise = storageService.deleteFolder(id);
+      const deletePromise = supabaseDatabaseService.deleteFolder(id);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Delete folder timeout - please check your connection and try again')), 10000)
       );

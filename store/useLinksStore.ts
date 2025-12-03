@@ -2,7 +2,7 @@
  * @file store/useLinksStore.ts
  * @description Link state management
  * @created 2025-11-12
- * @modified 2025-12-03
+ * @modified 2025-11-12
  */
 
 import { create } from 'zustand';
@@ -12,7 +12,6 @@ import { sanitizeLinkData } from '@/lib/utils/sanitization';
 import { logger } from '@/lib/utils/logger';
 import { detectMobileBrowser } from '@/lib/utils/platform';
 import { createClient } from '@/lib/supabase/client';
-import { getStorageService, isFreeUser } from '@/lib/services/storage-provider';
 
 interface LinksState {
   // State
@@ -73,33 +72,29 @@ export const useLinksStore = create<LinksState>((set, get) => ({
    */
   addLink: async (linkData) => {
     const browserInfo = detectMobileBrowser();
-    const isLocalMode = isFreeUser();
 
     try {
       // CRITICAL: Sanitize input data to prevent XSS
       const sanitizedData = sanitizeLinkData(linkData);
 
-      // Skip session validation for free users (local storage mode)
-      if (!isLocalMode) {
-        // ENHANCED: Validate session before attempting to save
-        let user = null;
-        try {
-          const { data: { user: currentUser } } = await createClient().auth.getUser();
-          user = currentUser;
+      // ENHANCED: Validate session before attempting to save
+      let user = null;
+      try {
+        const { data: { user: currentUser } } = await createClient().auth.getUser();
+        user = currentUser;
 
-          if (!user) {
-            throw new Error('User not authenticated. Please log in again.');
-          }
-        } catch (sessionError) {
-          logger.warn('Session validation failed before adding link:', sessionError);
-          // Wait a moment and retry session validation (helps with timing issues)
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const { data: { user: retryUser } } = await createClient().auth.getUser();
-          user = retryUser;
+        if (!user) {
+          throw new Error('User not authenticated. Please log in again.');
+        }
+      } catch (sessionError) {
+        logger.warn('Session validation failed before adding link:', sessionError);
+        // Wait a moment and retry session validation (helps with timing issues)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const { data: { user: retryUser } } = await createClient().auth.getUser();
+        user = retryUser;
 
-          if (!user) {
-            throw new Error('Session expired. Please refresh the page and try again.');
-          }
+        if (!user) {
+          throw new Error('Session expired. Please refresh the page and try again.');
         }
       }
 
@@ -132,15 +127,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
 
       // ENHANCED: Add timeout protection with mobile-specific duration and retry logic
       const timeoutDuration = browserInfo.isMobile ? 8000 : 5000; // Reduced timeout for better UX (5s desktop, 8s mobile)
-      const maxRetries = isLocalMode ? 0 : 1; // No retries for local storage, 1 retry for cloud
+      const maxRetries = 1; // Reduce retries to 1 to fail faster
       let lastError: Error | null = null;
-
-      // Get the appropriate storage service
-      const storageService = getStorageService();
 
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
-          const savePromise = storageService.addLink(sanitizedData);
+          const savePromise = linksDatabaseService.addLink(sanitizedData);
           const timeoutPromise = new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('Add link timeout - please check your connection')), timeoutDuration)
           );
@@ -236,8 +228,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       }));
 
       // ENHANCED: Add timeout protection to prevent hanging updates
-      const storageService = getStorageService();
-      const updatePromise = storageService.updateLink(id, sanitizedUpdates);
+      const updatePromise = linksDatabaseService.updateLink(id, sanitizedUpdates);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Update link timeout - please check your connection and try again')), 10000)
       );
@@ -285,8 +276,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       }));
 
       // ENHANCED: Add timeout protection to prevent hanging deletes
-      const storageService = getStorageService();
-      const deletePromise = storageService.deleteLink(id);
+      const deletePromise = linksDatabaseService.deleteLink(id);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Delete link timeout - please check your connection and try again')), 10000)
       );
@@ -327,8 +317,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       }));
 
       // Update in database
-      const storageService = getStorageService();
-      await storageService.restoreLink(id);
+      await linksDatabaseService.restoreLink(id);
     } catch (error) {
       // Revert on error
       set((state) => ({
@@ -361,8 +350,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       set((state) => ({ links: state.links.filter((link) => link.id !== id) }));
 
       // Delete from database
-      const storageService = getStorageService();
-      await storageService.permanentlyDeleteLink(id);
+      await linksDatabaseService.permanentlyDeleteLink(id);
     } catch (error) {
       // Revert on error - restore the deleted link
       set((state) => ({ links: [...state.links, linkToDelete] }));
@@ -394,8 +382,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       }));
 
       // Update in database
-      const storageService = getStorageService();
-      await storageService.updateLink(id, { isFavorite: newFavoriteState });
+      await linksDatabaseService.updateLink(id, { isFavorite: newFavoriteState });
     } catch (error) {
       // Revert on error
       set((state) => ({
@@ -442,26 +429,8 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       });
 
       // Update in database with timeout protection
-      // Note: For local storage, bulk operations are handled by individual updates
       const timeoutDuration = browserInfo.isMobile ? 20000 : 15000;
-      const storageService = getStorageService();
-      
-      // For local storage, we need to update each link individually
-      const isLocalMode = isFreeUser();
-      let updatePromise: Promise<void>;
-      
-      if (isLocalMode) {
-        // Local storage: update each link
-        updatePromise = (async () => {
-          for (const id of ids) {
-            await storageService.updateLink(id, updates);
-          }
-        })();
-      } else {
-        // Supabase: use bulk update
-        updatePromise = linksDatabaseService.bulkUpdateLinks(ids, updates).then(() => {});
-      }
-      
+      const updatePromise = linksDatabaseService.bulkUpdateLinks(ids, updates);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Bulk update timeout - please check your connection')), timeoutDuration)
       );
@@ -510,8 +479,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       }));
 
       // Update in database
-      const storageService = getStorageService();
-      await storageService.bulkDeleteLinks(ids);
+      await linksDatabaseService.bulkDeleteLinks(ids);
     } catch (error) {
       // Revert on error
       set((state) => ({
@@ -544,8 +512,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       }));
 
       // Update in database
-      const storageService = getStorageService();
-      await storageService.bulkRestoreLinks(ids);
+      await linksDatabaseService.bulkRestoreLinks(ids);
     } catch (error) {
       // Revert on error
       set((state) => ({
@@ -586,9 +553,8 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       }));
 
       // Update in database with timeout protection
-      const storageService = getStorageService();
       await Promise.race([
-        storageService.bulkMoveLinks(ids, folderId),
+        linksDatabaseService.bulkMoveLinks(ids, folderId),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Move links timeout - please check your connection')), 10000)
         )
@@ -630,17 +596,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       }));
 
       // Update in database
-      // Note: For local storage, we update each link individually
-      const storageService = getStorageService();
-      const isLocalMode = isFreeUser();
-      
-      if (isLocalMode) {
-        for (const id of ids) {
-          await storageService.updateLink(id, { isFavorite });
-        }
-      } else {
-        await linksDatabaseService.bulkToggleFavoriteLinks(ids, isFavorite);
-      }
+      await linksDatabaseService.bulkToggleFavoriteLinks(ids, isFavorite);
     } catch (error) {
       // Revert on error
       const originalLinks = get().links.filter(link => ids.includes(link.id));
@@ -671,8 +627,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       }));
 
       // Delete from database
-      const storageService = getStorageService();
-      await storageService.emptyTrash();
+      await linksDatabaseService.emptyTrash();
     } catch (error) {
       // Revert on error - restore deleted links
       set((state) => ({ links: [...state.links, ...deletedLinks] }));
@@ -701,8 +656,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       }));
 
       // Update in database
-      const storageService = getStorageService();
-      await storageService.restoreAllFromTrash();
+      await linksDatabaseService.restoreAllFromTrash();
     } catch (error) {
       // Revert on error - restore original state
       set({ links: originalLinks });

@@ -1,0 +1,25 @@
+{
+  "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "/sitemap.xml"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/robots.txt"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.linksvault.online"
+        }
+      ],
+      "destination": "https://linksvault.online/:path*",
+      "permanent": true
+    }
+  ]
+}

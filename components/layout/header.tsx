@@ -24,7 +24,6 @@ import {
 import { useAuth } from "@/lib/contexts/auth-context";
 import { useLogout } from "@/hooks/use-logout";
 import { ProfileModal } from "@/components/modals/profile-modal";
-import { LocalModeIndicator } from "@/components/common/local-mode-indicator";
 
 export function Header() {
   const setAddLinkModalOpen = useStore((state) => state.setAddLinkModalOpen);
@@ -61,9 +60,6 @@ export function Header() {
               LinksVault
             </span>
           </div>
-
-          {/* Local Mode Indicator */}
-          <LocalModeIndicator />
 
           {/* Spacer - Flexible */}
           <div className="flex-1" />

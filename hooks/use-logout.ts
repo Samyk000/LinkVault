@@ -4,10 +4,9 @@ import { useStore } from '@/store/useStore';
 import { supabaseDatabaseService } from '@/lib/services/supabase-database.service';
 import { globalCache } from '@/lib/services/cache-manager';
 import { performanceMonitor } from '@/lib/services/performance-monitor.service';
-import { STORAGE_KEYS } from '@/lib/services/storage.interface';
 
 export function useLogout() {
-  const { signOut, isFreeUser, signOutFreeUser } = useAuth();
+  const { signOut } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const isLoggingOutRef = useRef(false);
 
@@ -22,35 +21,16 @@ export function useLogout() {
     // 2. Small delay to ensure spinner renders
     await new Promise(resolve => setTimeout(resolve, 10));
 
-    // Handle free user logout separately
-    if (isFreeUser) {
-      // Clear free user session flag but preserve data
-      signOutFreeUser();
-      
-      // Small delay before redirect
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Redirect to login
-      window.location.replace('/login');
-      return;
-    }
-
     // CRITICAL: Set logout flag
     if (typeof window !== 'undefined') {
       localStorage.setItem('linkvault_logging_out', 'true');
     }
 
     // 3. Clear cache and localStorage (synchronous)
-    // Note: Preserve linksvault_links, linksvault_folders, linksvault_settings for free user data
     try {
       globalCache.clear();
       if (typeof window !== 'undefined') {
-        const preserveKeys: string[] = [STORAGE_KEYS.LINKS, STORAGE_KEYS.FOLDERS, STORAGE_KEYS.SETTINGS];
         Object.keys(localStorage).forEach(key => {
-          // Preserve free user data keys
-          if (preserveKeys.includes(key)) {
-            return;
-          }
           if (key.startsWith('linkvault_') || key.startsWith('supabase.')) {
             localStorage.removeItem(key);
           }

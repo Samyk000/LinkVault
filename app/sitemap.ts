@@ -9,11 +9,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
-      url: 'https://linksvault.online/about',
+      url: 'https://linksvault.online/login',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
-    // Add other static routes here if needed
+    {
+      url: 'https://linksvault.online/signup',
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: 'https://linksvault.online/app',
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
   ]
 }

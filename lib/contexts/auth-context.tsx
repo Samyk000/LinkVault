@@ -2,7 +2,7 @@
  * @file lib/contexts/auth-context.tsx
  * @description Simplified React context for authentication state management
  * @created 2025-01-01
- * @modified 2025-12-03
+ * @modified 2025-01-21
  */
 
 'use client';
@@ -13,7 +13,6 @@ import { AuthUser, AuthState, SignUpData, SignInData, AuthError } from '@/lib/ty
 import { logger } from '@/lib/utils/logger';
 import { AUTH_CONSTANTS } from '@/constants/auth.constants';
 import { recoverSession, validateSession, markUserLoggedOut, clearLogoutMarker } from '@/lib/services/session-recovery.service';
-import { isFreeUser, setFreeUserFlag } from '@/lib/services/storage-provider';
 
 interface AuthContextType extends AuthState {
   signUp: (data: SignUpData) => Promise<{ error: AuthError | null }>;
@@ -23,10 +22,6 @@ interface AuthContextType extends AuthState {
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
   clearError: () => void;
   refreshUser: () => Promise<void>;
-  // Free user methods
-  isFreeUser: boolean;
-  signInAsFreeUser: () => void;
-  signOutFreeUser: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,20 +38,11 @@ interface AuthProviderProps {
  * @returns {JSX.Element} Provider component
  */
 export function AuthProvider({ children, initialUser }: AuthProviderProps): React.JSX.Element {
-  // Initialize freeUserMode from localStorage if available (client-side only)
-  const getInitialFreeUserMode = () => {
-    if (typeof window !== 'undefined') {
-      return isFreeUser();
-    }
-    return false;
-  };
-
   const [state, setState] = useState<AuthState>({
     user: initialUser || null,
     loading: !initialUser,
     error: null,
   });
-  const [freeUserMode, setFreeUserMode] = useState<boolean>(getInitialFreeUserMode);
 
   /**
    * Clear any authentication errors
@@ -117,10 +103,6 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
         return { error };
       }
 
-      // Clear free user flag when signing up for a full account
-      setFreeUserFlag(false);
-      setFreeUserMode(false);
-
       setUser(user);
       return { error: null };
     } catch (error) {
@@ -151,10 +133,6 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
 
       // Clear logout marker on successful login
       clearLogoutMarker();
-      
-      // Clear free user flag when signing in with a full account
-      setFreeUserFlag(false);
-      setFreeUserMode(false);
 
       setUser(user);
       return { error: null };
@@ -233,37 +211,6 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
     }
   }, [clearError, setError]);
 
-  /**
-   * Sign in as a free user (local storage mode)
-   */
-  const signInAsFreeUser = useCallback(() => {
-    setFreeUserFlag(true);
-    setFreeUserMode(true);
-    setState(prev => ({
-      ...prev,
-      user: null,
-      loading: false,
-      error: null,
-    }));
-    logger.info('User signed in as free user (local mode)');
-  }, []);
-
-  /**
-   * Sign out from free user mode
-   * Clears the session flag but preserves locally stored data
-   */
-  const signOutFreeUser = useCallback(() => {
-    setFreeUserFlag(false);
-    setFreeUserMode(false);
-    setState(prev => ({
-      ...prev,
-      user: null,
-      loading: false,
-      error: null,
-    }));
-    logger.info('Free user signed out (data preserved)');
-  }, []);
-
   // Initialize auth state and listen for changes
   useEffect(() => {
     let mounted = true;
@@ -274,19 +221,6 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
      * OPTIMIZED: Reduced timeout from 35s/15s to 8s
      */
     const initializeAuth = async () => {
-      // Check for free user mode first
-      if (isFreeUser()) {
-        setFreeUserMode(true);
-        setState(prev => ({
-          ...prev,
-          user: null,
-          loading: false,
-          error: null,
-        }));
-        logger.debug('Auth initialized with free user mode');
-        return;
-      }
-
       // If we have an initial user from SSR, skip client-side recovery
       if (initialUser) {
         logger.debug('Auth initialized with SSR user');
@@ -308,13 +242,8 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
             setUser(user);
 
             // Set up periodic session validation (every 2 minutes)
-            // Only validate if we have a user (skip for free users)
+            // Only validate if we have a user
             sessionCheckInterval = setInterval(async () => {
-              // Skip session validation for free users
-              if (isFreeUser()) {
-                return;
-              }
-              
               // Check if we have a current user before validating session
               // This prevents spurious "session expired" toasts on public pages
               const currentUser = await authService.getCurrentUser();
@@ -390,14 +319,10 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
     });
 
     // Listen for logout broadcasts from other tabs
-    // Skip for free users as they don't have cloud sessions
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window && !isFreeUser()) {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       const channel = new BroadcastChannel('auth-sync');
       channel.addEventListener('message', (event) => {
         try {
-          // Skip broadcast handling for free users
-          if (isFreeUser()) return;
-          
           if (event.data.type === 'LOGOUT' && mounted) {
             setUser(null);
             if (!window.location.pathname.startsWith('/login')) {
@@ -446,10 +371,6 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
     updatePassword,
     clearError,
     refreshUser,
-    // Free user support
-    isFreeUser: freeUserMode,
-    signInAsFreeUser,
-    signOutFreeUser,
   };
 
   return (

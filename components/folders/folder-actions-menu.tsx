@@ -1,13 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MoreVertical, Edit, Share2, Trash2, Lock, FolderPlus } from 'lucide-react';
+import { MoreVertical, Edit, Share2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ShareFolderModal } from '@/components/modals/share-folder-modal';
-import { useFreeUser } from '@/hooks/use-free-user';
-import { useToast } from '@/hooks/use-toast';
-import { useStore } from '@/store/useStore';
 
 interface FolderActionsMenuProps {
     folder: {
@@ -16,7 +13,6 @@ interface FolderActionsMenuProps {
         linkCount: number;
         shareable?: boolean;
         shareId?: string | null;
-        parentId?: string | null;
     };
     onEdit: (folderId: string) => void;
     onDelete: (folderId: string) => void;
@@ -24,38 +20,6 @@ interface FolderActionsMenuProps {
 
 export function FolderActionsMenu({ folder, onEdit, onDelete }: FolderActionsMenuProps) {
     const [showShareModal, setShowShareModal] = useState(false);
-    const { isFreeUser } = useFreeUser();
-    const { toast } = useToast();
-    const setParentFolder = useStore((state) => state.setParentFolder);
-    const setCreateFolderModalOpen = useStore((state) => state.setCreateFolderModalOpen);
-
-    // Check if this folder can have sub-folders (only root folders can)
-    const canHaveSubFolders = folder.parentId === null || folder.parentId === undefined;
-
-    const handleFreeUserAction = (action: string) => {
-        toast({
-            title: `${action} requires an account`,
-            description: "Sign up to unlock this feature",
-            variant: "default",
-        });
-    };
-
-    const handleAddSubFolder = () => {
-        if (isFreeUser) {
-            handleFreeUserAction("Sub-folders");
-            return;
-        }
-        setParentFolder(folder.id);
-        setCreateFolderModalOpen(true);
-    };
-
-    const handleShareFolder = () => {
-        if (isFreeUser) {
-            handleFreeUserAction("Folder sharing");
-            return;
-        }
-        setShowShareModal(true);
-    };
 
     return (
         <>
@@ -72,34 +36,11 @@ export function FolderActionsMenu({ folder, onEdit, onDelete }: FolderActionsMen
                         Edit Folder
                     </DropdownMenuItem>
 
-                    {/* Add Sub-folder option - only for root folders */}
-                    {canHaveSubFolders && (
-                        <DropdownMenuItem
-                            onSelect={handleAddSubFolder}
-                            className={isFreeUser ? "text-muted-foreground opacity-60" : ""}
-                        >
-                            {isFreeUser ? (
-                                <Lock className="h-4 w-4 mr-2" />
-                            ) : (
-                                <FolderPlus className="h-4 w-4 mr-2" />
-                            )}
-                            Add Sub-folder
-                        </DropdownMenuItem>
-                    )}
-
-                    {/* Share option */}
                     <DropdownMenuItem
-                        onSelect={handleShareFolder}
-                        className={isFreeUser 
-                            ? "text-muted-foreground opacity-60" 
-                            : "text-orange-600 focus:bg-orange-50 focus:text-orange-600"
-                        }
+                        onSelect={() => setShowShareModal(true)}
+                        className="text-orange-600 focus:bg-orange-50 focus:text-orange-600"
                     >
-                        {isFreeUser ? (
-                            <Lock className="h-4 w-4 mr-2" />
-                        ) : (
-                            <Share2 className="h-4 w-4 mr-2" />
-                        )}
+                        <Share2 className="h-4 w-4 mr-2" />
                         {folder.shareable ? 'Manage Sharing' : 'Share Folder'}
                     </DropdownMenuItem>
 
@@ -115,17 +56,15 @@ export function FolderActionsMenu({ folder, onEdit, onDelete }: FolderActionsMen
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            {!isFreeUser && (
-                <ShareFolderModal
-                    folder={{
-                        id: folder.id,
-                        name: folder.name,
-                        linkCount: folder.linkCount
-                    }}
-                    isOpen={showShareModal}
-                    onClose={() => setShowShareModal(false)}
-                />
-            )}
+            <ShareFolderModal
+                folder={{
+                    id: folder.id,
+                    name: folder.name,
+                    linkCount: folder.linkCount
+                }}
+                isOpen={showShareModal}
+                onClose={() => setShowShareModal(false)}
+            />
         </>
     );
 }

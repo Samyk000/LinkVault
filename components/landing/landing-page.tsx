@@ -10,7 +10,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, DownloadCloud, Search, FolderInput, Share2, Asterisk, Twitter, Github, Linkedin, Disc, HardDrive } from 'lucide-react';
+import { ArrowRight, DownloadCloud, Search, FolderInput, Share2, Asterisk, Twitter, Github, Linkedin, Disc } from 'lucide-react';
 
 /**
  * Landing page component for unauthenticated users
@@ -76,7 +76,7 @@ export function LandingPage(): React.JSX.Element {
               </p>
             </div>
 
-            <div className="mt-12 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+            <div className="mt-12 flex items-center gap-8">
               <button
                 onClick={() => router.push('/login')}
                 className="group relative px-8 py-4 bg-[#FF4D00] text-white overflow-hidden"
@@ -86,16 +86,7 @@ export function LandingPage(): React.JSX.Element {
                   Initialize Vault <ArrowRight className="w-4 h-4" />
                 </span>
               </button>
-              <button
-                onClick={() => router.push('/login?freeUser=true')}
-                className="group relative px-6 py-4 border-2 border-black bg-white text-black overflow-hidden hover:border-[#FF4D00] transition-colors"
-              >
-                <span className="relative font-mono font-bold uppercase text-xs tracking-widest flex items-center gap-2">
-                  <HardDrive className="w-4 h-4" />
-                  Try Free (Local Only)
-                </span>
-              </button>
-              <div className="hidden lg:block">
+              <div className="hidden md:block">
                 <span className="font-mono text-xs text-gray-400 block mb-1">// AUTO-FETCH ENABLED</span>
                 <span className="font-mono text-xs text-gray-400 block">// SECURE ENCRYPTION</span>
               </div>

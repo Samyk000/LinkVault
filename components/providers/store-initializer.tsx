@@ -22,18 +22,16 @@ import { DEFAULT_SETTINGS } from '@/constants';
 import { createClient } from '@/lib/supabase/client';
 import { Link, Folder, AppSettings } from '@/types';
 import type { AuthResponse } from '@supabase/supabase-js';
-import { getStorageService, isFreeUser } from '@/lib/services/storage-provider';
 
 export function StoreInitializer() {
   // Use modular stores
   const { setLinks } = useLinksStore();
   const { setFolders } = useFoldersStore();
-  const { setSettings } = useSettingsStore();
+  const { setSettings, loadSettings } = useSettingsStore();
   const { setHydrated, setIsLoadingData } = useUIStore();
-  const { user, loading: authLoading, isFreeUser: isFreeUserAuth } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const hasLoaded = useRef(false);
   const prevUserId = useRef<string | null>(null);
-  const prevIsFreeUser = useRef<boolean>(false);
 
   useEffect(() => {
     // CRITICAL: Check for logout flag in localStorage (set by logout handler)
@@ -54,23 +52,20 @@ export function StoreInitializer() {
 
     // Check if user has changed (logout or login with different user)
     const currentUserId = user?.id || null;
-    const currentIsFreeUser = isFreeUserAuth || isFreeUser();
-    
-    if (prevUserId.current !== currentUserId || prevIsFreeUser.current !== currentIsFreeUser) {
+    if (prevUserId.current !== currentUserId) {
       // User changed, clear old data and reset loading state
       setLinks([]);
       setFolders([]);
-      setSettings(DEFAULT_SETTINGS); // Reset to defaults, will be loaded properly later
+      loadSettings(); // This will load from Supabase
       hasLoaded.current = false;
       // Force re-render by setting isHydrated to false
       setHydrated(false);
     }
     prevUserId.current = currentUserId;
-    prevIsFreeUser.current = currentIsFreeUser;
 
-    // Only load data if user is authenticated (including free users)
-    if (!user && !currentIsFreeUser) {
-      // No user and not free user, don't try to load data
+    // Only load data if user is authenticated
+    if (!user) {
+      // No user, don't try to load data
       // Set hydrated to true so app doesn't show infinite loading
       setHydrated(true);
       return;
@@ -84,14 +79,6 @@ export function StoreInitializer() {
 
     // CRITICAL: Enhanced session validation with mobile-specific handling
     const validateSessionAndLoad = async () => {
-      // Skip session validation for free users - they use localStorage
-      const isLocalMode = isFreeUser();
-      if (isLocalMode) {
-        logger.debug('Free user mode detected, skipping session validation');
-        initializeData();
-        return;
-      }
-      
       try {
         // Mobile browsers need special handling due to storage limitations
         const isMobile = typeof window !== 'undefined' &&
@@ -182,19 +169,16 @@ export function StoreInitializer() {
       }
     };
 
-    // Function to load data from storage (local or Supabase)
-    const loadDataFromStorage = async () => {
-      const isLocalMode = isFreeUser();
-      const storageService = getStorageService();
-      
+    // Function to load data from Supabase
+    const loadDataFromSupabase = async () => {
       try {
-        logger.debug(`Loading data from ${isLocalMode ? 'localStorage' : 'Supabase'}...`);
+        logger.debug('Loading data from Supabase...');
 
         // Load all data in parallel
         const [settingsResult, foldersResult, linksResult] = await Promise.allSettled([
-          storageService.getSettings(),
-          storageService.getFolders(),
-          storageService.getLinks()
+          supabaseDatabaseService.getSettings(),
+          supabaseDatabaseService.getFolders(),
+          supabaseDatabaseService.getLinks()
         ]);
 
         // Extract results with fallbacks
@@ -208,14 +192,14 @@ export function StoreInitializer() {
           ? linksResult.value
           : [];
 
-        logger.debug(`Loaded ${links.length} links, ${folders.length} folders from ${isLocalMode ? 'localStorage' : 'Supabase'}`);
+        logger.debug(`Loaded ${links.length} links, ${folders.length} folders`);
 
         // Update stores
         setLinks(links);
         setFolders(folders);
         setSettings(settings);
       } catch (error) {
-        logger.error(`Error loading data from ${isLocalMode ? 'localStorage' : 'Supabase'}:`, error);
+        logger.error('Error loading data from Supabase:', error);
         // Set defaults on error
         setLinks([]);
         setFolders([]);
@@ -223,9 +207,6 @@ export function StoreInitializer() {
         throw error;
       }
     };
-    
-    // Legacy function for Supabase fallback
-    const loadDataFromSupabase = loadDataFromStorage;
 
     // OPTIMIZED: Initial load from Supabase - completely non-blocking
     const initializeData = async () => {
@@ -340,7 +321,6 @@ export function StoreInitializer() {
     validateSessionAndLoad();
 
     // Set up real-time subscriptions with proper error handling and retry logic
-    // Note: Skip for free users as they use localStorage
     let unsubscribeLinks: (() => void) | null = null;
     let unsubscribeFolders: (() => void) | null = null;
     let subscriptionTimeout: NodeJS.Timeout | null = null;
@@ -351,12 +331,6 @@ export function StoreInitializer() {
 
     const setupSubscriptions = () => {
       if (!isComponentMounted) return;
-      
-      // Skip real-time subscriptions for free users
-      if (isFreeUser()) {
-        logger.debug('Free user mode - skipping real-time subscriptions');
-        return;
-      }
 
       try {
         // OPTIMIZED: Make realtime subscriptions gracefully degrade if they fail
@@ -395,10 +369,7 @@ export function StoreInitializer() {
 
     // OPTIMIZED: Delay realtime subscriptions to prioritize initial data load
     // Realtime is nice-to-have, not critical for app functionality
-    // Skip entirely for free users
-    if (!isFreeUser()) {
-      subscriptionTimeout = setTimeout(setupSubscriptions, 2000);
-    }
+    subscriptionTimeout = setTimeout(setupSubscriptions, 2000);
 
     // Cleanup subscriptions on unmount
     return () => {
@@ -424,7 +395,7 @@ export function StoreInitializer() {
         logger.error('Error cleaning up subscriptions:', error);
       }
     };
-  }, [user, authLoading, isFreeUserAuth, setLinks, setFolders, setSettings, setHydrated, setIsLoadingData]);
+  }, [user, authLoading, setLinks, setFolders, setSettings, loadSettings, setHydrated, setIsLoadingData]);
 
   return null;
 }
