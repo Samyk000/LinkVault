@@ -11,8 +11,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { authService } from '@/lib/services/auth';
 import { AuthUser, AuthState, SignUpData, SignInData, AuthError } from '@/lib/types/auth';
 import { logger } from '@/lib/utils/logger';
-import { AUTH_CONSTANTS } from '@/constants/auth.constants';
-import { recoverSession, validateSession, markUserLoggedOut, clearLogoutMarker } from '@/lib/services/session-recovery.service';
+import { recoverSession, markUserLoggedOut, clearLogoutMarker } from '@/lib/services/session-recovery.service';
 
 interface AuthContextType extends AuthState {
   signUp: (data: SignUpData) => Promise<{ error: AuthError | null }>;
@@ -214,153 +213,88 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
   // Initialize auth state and listen for changes
   useEffect(() => {
     let mounted = true;
-    let sessionCheckInterval: NodeJS.Timeout | null = null;
 
     /**
      * Initialize authentication state
-     * OPTIMIZED: Reduced timeout from 35s/15s to 8s
+     * SIMPLIFIED: Only recover session if no initial user from SSR
      */
     const initializeAuth = async () => {
-      // If we have an initial user from SSR, skip client-side recovery
+      // If we have an initial user from SSR, we're done
       if (initialUser) {
         logger.debug('Auth initialized with SSR user');
+        setState(prev => ({ ...prev, loading: false }));
         return;
       }
 
       try {
-        // Set timeout for auth initialization
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Auth initialization timeout')), AUTH_CONSTANTS.INIT_TIMEOUT);
-        });
-
-        const userPromise = recoverSession();
-
-        try {
-          const user = await Promise.race([userPromise, timeoutPromise]);
-
-          if (mounted) {
-            setUser(user);
-
-            // Set up periodic session validation (every 2 minutes)
-            // Only validate if we have a user
-            sessionCheckInterval = setInterval(async () => {
-              // Check if we have a current user before validating session
-              // This prevents spurious "session expired" toasts on public pages
-              const currentUser = await authService.getCurrentUser();
-              if (!currentUser) return;
-
-              const isValid = await validateSession();
-              if (!isValid && mounted) {
-                logger.warn('Session expired, redirecting to login');
-                setUser(null);
-                if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-                  window.location.replace('/login?expired=true');
-                }
-              }
-            }, AUTH_CONSTANTS.SESSION_CHECK_INTERVAL);
-          }
-        } catch (timeoutError) {
-          if (mounted) {
-            logger.warn('Auth initialization timed out');
-            setUser(null);
-            setError({
-              message: 'Authentication is taking longer than expected. Please refresh the page or try logging in again.',
-            });
-          }
+        // Quick session check - no complex recovery needed
+        const user = await recoverSession();
+        
+        if (mounted) {
+          setState(prev => ({ 
+            ...prev, 
+            user: user, 
+            loading: false,
+            error: null 
+          }));
         }
       } catch (error) {
         logger.error('Error initializing auth:', error);
         if (mounted) {
-          setError({
-            message: 'Failed to initialize authentication',
-          });
+          setState(prev => ({ 
+            ...prev, 
+            user: null, 
+            loading: false,
+            error: null // Don't show error for failed session recovery
+          }));
         }
       }
     };
 
     initializeAuth();
 
-    // Listen for auth state changes
+    // Listen for auth state changes from Supabase
     const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
-      try {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const user = await authService.getCurrentUser();
-          if (user && mounted) {
-            setUser(user);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          if (mounted) {
-            logger.info('Auth state changed to SIGNED_OUT');
-            setUser(null);
+      logger.debug('Auth state change:', event);
 
-            // Only redirect if not already on login page
-            if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-              window.location.replace('/login');
-            }
-          }
-        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          const user = await authService.getCurrentUser();
-          if (user && mounted) {
-            setUser(user);
-          }
-        } else if (!session && mounted) {
-          setUser(null);
+      if (event === 'SIGNED_IN' && session?.user) {
+        // User signed in - update state immediately with basic user info
+        // Profile/settings will be fetched by getCurrentUser
+        const user = await authService.getCurrentUser();
+        if (user && mounted) {
+          setState(prev => ({ ...prev, user, loading: false, error: null }));
         }
-      } catch (error) {
-        logger.error('Error handling auth state change:', error);
+      } else if (event === 'SIGNED_OUT') {
         if (mounted) {
-          setError({
-            message: 'Authentication state change failed',
-          });
+          setState(prev => ({ ...prev, user: null, loading: false, error: null }));
         }
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        // Token refreshed - no need to refetch user, just update if needed
+        logger.debug('Token refreshed');
       }
     });
 
     // Listen for logout broadcasts from other tabs
+    let channel: BroadcastChannel | null = null;
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      const channel = new BroadcastChannel('auth-sync');
+      channel = new BroadcastChannel('auth-sync');
       channel.addEventListener('message', (event) => {
-        try {
-          if (event.data.type === 'LOGOUT' && mounted) {
-            setUser(null);
-            if (!window.location.pathname.startsWith('/login')) {
-              window.location.replace('/login');
-            }
-          } else if (event.data.type === 'SESSION_EXPIRED' && mounted) {
-            setUser(null);
-            if (!window.location.pathname.startsWith('/login')) {
-              window.location.replace('/login?expired=true');
-            }
-          }
-        } catch (error) {
-          logger.error('Error handling broadcast message:', error);
+        if (event.data.type === 'LOGOUT' && mounted) {
+          setState(prev => ({ ...prev, user: null, loading: false }));
         }
       });
-
-      return () => {
-        mounted = false;
-        if (sessionCheckInterval) {
-          clearInterval(sessionCheckInterval);
-        }
-        subscription?.unsubscribe();
-        try {
-          channel.close();
-        } catch (error) {
-          logger.warn('Error closing broadcast channel:', error);
-        }
-      };
     }
 
     return () => {
       mounted = false;
-      if (sessionCheckInterval) {
-        clearInterval(sessionCheckInterval);
-      }
       subscription?.unsubscribe();
+      if (channel) {
+        try { channel.close(); } catch (e) { /* ignore */ }
+      }
     };
-  }, [setUser, setError, initialUser]);
+  }, [initialUser]);
 
   const value: AuthContextType = {
     ...state,

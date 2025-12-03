@@ -7,35 +7,34 @@
 export const AUTH_CONSTANTS = {
     /**
      * Interval for periodic session validation (milliseconds)
-     * Reduced from 30s to 120s to conserve mobile battery
      */
     SESSION_CHECK_INTERVAL: 120000, // 2 minutes
 
     /**
      * Timeout for auth initialization (milliseconds)
-     * Reduced from 35s/15s to 8s for faster feedback
      */
-    INIT_TIMEOUT: 8000, // 8 seconds
+    INIT_TIMEOUT: 5000, // 5 seconds - faster feedback
 
     /**
      * Delay between retry attempts (milliseconds)
      */
-    RETRY_DELAY: 500, // 500ms
+    RETRY_DELAY: 200, // 200ms - faster retries
 
     /**
      * Maximum number of retry attempts for session verification
      */
-    MAX_RETRIES: 2,
+    MAX_RETRIES: 1, // Single retry only
 
     /**
      * Duration to wait after logout before allowing session recovery (milliseconds)
+     * Reduced to 5 seconds - just enough to prevent race conditions
      */
-    POST_LOGOUT_COOLDOWN: 300000, // 5 minutes
+    POST_LOGOUT_COOLDOWN: 5000, // 5 seconds (was 5 minutes)
 
     /**
      * Timeout for network requests (milliseconds)
      */
-    FETCH_TIMEOUT: 15000, // 15 seconds
+    FETCH_TIMEOUT: 10000, // 10 seconds
 } as const;
 
 /**

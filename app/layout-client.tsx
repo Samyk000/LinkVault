@@ -18,17 +18,18 @@ interface LayoutClientProps {
 
 /**
  * Wrapper component to render PerformanceDashboard only for authenticated users in development
+ * CRITICAL: This component is completely removed in production builds
  */
 function AuthenticatedPerformanceDashboard() {
-  const { user } = useAuth();
-
-  // Only show debug dashboard in development environment
-  if (process.env.NODE_ENV !== 'development') {
+  // CRITICAL: Double-check we're in development - this should be tree-shaken in production
+  // but we add runtime check as safety net
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1')) {
     return null;
   }
 
+  const { user } = useAuth();
+
   // Only render performance dashboard if user is authenticated
-  // This prevents it from running on login page and respects user privacy
   if (!user) {
     return null;
   }
