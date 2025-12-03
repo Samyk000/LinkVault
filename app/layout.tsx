@@ -25,8 +25,43 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LinksVault - Your Personal Link Manager",
-  description: "Save, organize, and rediscover your digital content with LinkVault",
+  metadataBase: new URL('https://www.linksvault.online'),
+  title: {
+    default: "LinksVault - Your Personal Link Manager",
+    template: "%s | LinksVault",
+  },
+  description: "Save, organize, and rediscover your digital content with LinksVault. The smart way to manage your bookmarks and links.",
+  keywords: ["link manager", "bookmark manager", "save links", "organize bookmarks", "digital content", "link organizer"],
+  authors: [{ name: "LinksVault" }],
+  creator: "LinksVault",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://www.linksvault.online",
+    siteName: "LinksVault",
+    title: "LinksVault - Your Personal Link Manager",
+    description: "Save, organize, and rediscover your digital content with LinksVault. The smart way to manage your bookmarks and links.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "LinksVault - Your Personal Link Manager",
+    description: "Save, organize, and rediscover your digital content with LinksVault.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    // Add your Google Search Console verification code here when you have it
+    // google: 'your-verification-code',
+  },
 };
 
 export default async function RootLayout({

@@ -1,30 +1,26 @@
 import { MetadataRoute } from 'next'
 
+const BASE_URL = 'https://www.linksvault.online'
+
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: 'https://linksvault.online',
+      url: BASE_URL,
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 1,
     },
     {
-      url: 'https://linksvault.online/login',
+      url: `${BASE_URL}/login`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
-      url: 'https://linksvault.online/signup',
+      url: `${BASE_URL}/signup`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
-    },
-    {
-      url: 'https://linksvault.online/app',
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.9,
     },
   ]
 }

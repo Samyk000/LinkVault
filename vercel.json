@@ -1,25 +1,22 @@
 {
-  "rewrites": [
+  "headers": [
     {
       "source": "/sitemap.xml",
-      "destination": "/sitemap.xml"
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/xml"
+        }
+      ]
     },
     {
       "source": "/robots.txt",
-      "destination": "/robots.txt"
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/:path*",
-      "has": [
+      "headers": [
         {
-          "type": "host",
-          "value": "www.linksvault.online"
+          "key": "Content-Type",
+          "value": "text/plain"
         }
-      ],
-      "destination": "https://linksvault.online/:path*",
-      "permanent": true
+      ]
     }
   ]
 }
