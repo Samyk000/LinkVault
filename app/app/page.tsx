@@ -56,7 +56,7 @@ export default function AppPage() {
   const currentView = useStore((state) => state.currentView);
   const searchFilters = useStore((state) => state.searchFilters);
   const isHydrated = useStore((state) => state.isHydrated);
-  const isLoadingLinks = useStore((state) => state.isLoadingLinks);
+  const isLoadingData = useStore((state) => state.isLoadingData);
 
   const setSearchFilters = useStore((state) => state.setSearchFilters);
   const setAddLinkModalOpen = useStore((state) => state.setAddLinkModalOpen);
@@ -66,9 +66,8 @@ export default function AppPage() {
   const isCreateFolderModalOpen = useStore((state) => state.isCreateFolderModalOpen);
   const { toast } = useToast();
 
-  // Show loading skeleton while store is hydrating OR while links are loading
-  const isInitialLoading = !isHydrated || isLoadingLinks;
-  const isLoadingData = useStore((state) => state.isLoadingData);
+  // Show loading skeleton while data is loading
+  const isLoadingLinks = isLoadingData;
 
   // Performance monitoring for main app page - disabled to reduce overhead
   const { trackMetric, trackInteraction, trackError } = usePerformanceMonitor({
