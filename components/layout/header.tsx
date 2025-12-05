@@ -42,10 +42,11 @@ export function Header() {
     setIsMounted(true);
   }, []);
 
-  // Handle guest logout - deactivate but keep data for when they return
+  // Handle guest logout - deactivate and redirect with hard navigation
   const handleGuestLogout = () => {
     deactivateGuestMode();
-    router.push('/login');
+    // Use hard navigation to ensure cookies are properly cleared before middleware checks
+    window.location.replace('/login');
   };
 
   // Only show guest mode UI after client-side mount to prevent hydration mismatch

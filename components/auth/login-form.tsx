@@ -295,7 +295,8 @@ export function LoginForm(): React.JSX.Element {
   const handleGuestModeConfirm = (): void => {
     guestStorageService.activateGuestMode();
     setShowGuestWarning(false);
-    router.push('/app');
+    // Use hard navigation to ensure middleware sees the guest_mode cookie
+    window.location.replace('/app');
   };
 
   /**

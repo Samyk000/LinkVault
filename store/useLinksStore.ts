@@ -252,7 +252,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       // ENHANCED: Add timeout protection to prevent hanging updates
       const updatePromise = linksDatabaseService.updateLink(id, sanitizedUpdates);
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Update link timeout - please check your connection and try again')), 10000)
+        setTimeout(() => reject(new Error('Update link timeout - please check your connection and try again')), 20000)
       );
 
       await Promise.race([updatePromise, timeoutPromise]);

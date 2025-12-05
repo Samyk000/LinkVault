@@ -65,3 +65,28 @@ export function extractDomain(url: string): string {
     return '';
   }
 }
+
+/**
+ * Normalizes a URL by adding https:// if no protocol is specified
+ * @param url - The URL string to normalize
+ * @returns The normalized URL with protocol
+ */
+export function normalizeUrl(url: string): string {
+  if (!url || typeof url !== 'string') return url;
+
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+
+  // If already has a protocol, return as-is
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  // If starts with //, add https:
+  if (trimmed.startsWith('//')) {
+    return `https:${trimmed}`;
+  }
+
+  // Add https:// prefix
+  return `https://${trimmed}`;
+}

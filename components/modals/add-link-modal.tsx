@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/store/useStore";
-import { detectPlatform, isValidUrl } from "@/utils/platform";
+import { detectPlatform, isValidUrl, normalizeUrl } from "@/utils/platform";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/utils/logger";
 import { FolderTreeSelect } from "@/components/folders/folder-tree-select";
@@ -35,7 +35,10 @@ import { detectMobileBrowser } from "@/lib/utils/platform";
 const METADATA_DEBOUNCE_DELAY = 800; // ms
 
 const linkSchema = z.object({
-  url: z.string().url("Please enter a valid URL"),
+  url: z.string()
+    .min(1, "URL is required")
+    .transform((val) => normalizeUrl(val))
+    .refine((val) => isValidUrl(val), { message: "Please enter a valid URL" }),
   title: z.string().min(1, "Title is required").max(100),
   description: z.string().max(VALIDATION_LIMITS.DESCRIPTION_MAX_LENGTH).optional(),
   folderId: z.string().nullable().optional(),
