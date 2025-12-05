@@ -8,10 +8,18 @@
 import { create } from 'zustand';
 import { Link } from '@/types';
 import { linksDatabaseService } from '@/lib/services/links-database.service';
+import { guestStorageService } from '@/lib/services/guest-storage.service';
 import { sanitizeLinkData } from '@/lib/utils/sanitization';
 import { logger } from '@/lib/utils/logger';
 import { detectMobileBrowser } from '@/lib/utils/platform';
 import { createClient } from '@/lib/supabase/client';
+
+/**
+ * Helper to check if guest mode is active
+ */
+const isGuestMode = (): boolean => {
+  return guestStorageService.isGuestMode();
+};
 
 interface LinksState {
   // State
@@ -76,6 +84,14 @@ export const useLinksStore = create<LinksState>((set, get) => ({
     try {
       // CRITICAL: Sanitize input data to prevent XSS
       const sanitizedData = sanitizeLinkData(linkData);
+
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        const newLink = await guestStorageService.addLink(sanitizedData);
+        set((state) => ({ links: [...state.links, newLink] }));
+        logger.debug('Link added in guest mode:', { id: newLink.id, url: newLink.url });
+        return;
+      }
 
       // ENHANCED: Validate session before attempting to save
       let user = null;
@@ -227,6 +243,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         ),
       }));
 
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.updateLink(id, sanitizedUpdates);
+        return;
+      }
+
       // ENHANCED: Add timeout protection to prevent hanging updates
       const updatePromise = linksDatabaseService.updateLink(id, sanitizedUpdates);
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -275,6 +297,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         ),
       }));
 
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.deleteLink(id);
+        return;
+      }
+
       // ENHANCED: Add timeout protection to prevent hanging deletes
       const deletePromise = linksDatabaseService.deleteLink(id);
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -316,6 +344,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         ),
       }));
 
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.restoreLink(id);
+        return;
+      }
+
       // Update in database
       await linksDatabaseService.restoreLink(id);
     } catch (error) {
@@ -349,6 +383,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       // Optimistic delete
       set((state) => ({ links: state.links.filter((link) => link.id !== id) }));
 
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.permanentlyDeleteLink(id);
+        return;
+      }
+
       // Delete from database
       await linksDatabaseService.permanentlyDeleteLink(id);
     } catch (error) {
@@ -380,6 +420,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
             : link
         ),
       }));
+
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.updateLink(id, { isFavorite: newFavoriteState });
+        return;
+      }
 
       // Update in database
       await linksDatabaseService.updateLink(id, { isFavorite: newFavoriteState });
@@ -427,6 +473,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         });
         return { links: updatedLinks };
       });
+
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.bulkUpdateLinks(ids, updates);
+        return;
+      }
 
       // Update in database with timeout protection
       const timeoutDuration = browserInfo.isMobile ? 20000 : 15000;
@@ -478,6 +530,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         ),
       }));
 
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.bulkDeleteLinks(ids);
+        return;
+      }
+
       // Update in database
       await linksDatabaseService.bulkDeleteLinks(ids);
     } catch (error) {
@@ -510,6 +568,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
             : link
         ),
       }));
+
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.bulkRestoreLinks(ids);
+        return;
+      }
 
       // Update in database
       await linksDatabaseService.bulkRestoreLinks(ids);
@@ -551,6 +615,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
             : link
         ),
       }));
+
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.bulkUpdateLinks(ids, { folderId });
+        return;
+      }
 
       // Update in database with timeout protection
       await Promise.race([
@@ -595,6 +665,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         ),
       }));
 
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.bulkUpdateLinks(ids, { isFavorite });
+        return;
+      }
+
       // Update in database
       await linksDatabaseService.bulkToggleFavoriteLinks(ids, isFavorite);
     } catch (error) {
@@ -626,6 +702,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         links: state.links.filter((link) => link.deletedAt === null),
       }));
 
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.emptyTrash();
+        return;
+      }
+
       // Delete from database
       await linksDatabaseService.emptyTrash();
     } catch (error) {
@@ -654,6 +736,12 @@ export const useLinksStore = create<LinksState>((set, get) => ({
             : link
         ),
       }));
+
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.restoreAllFromTrash();
+        return;
+      }
 
       // Update in database
       await linksDatabaseService.restoreAllFromTrash();

@@ -205,13 +205,17 @@ function validateAndSanitizeColor(color: any): string {
 }
 
 /**
- * Validates UUID format
- * @param {string} uuid - UUID to validate
- * @returns {boolean} Whether the string is a valid UUID
+ * Validates UUID format or guest mode ID format
+ * @param {string} id - ID to validate
+ * @returns {boolean} Whether the string is a valid UUID or guest ID
  */
-function isValidUuid(uuid: string): boolean {
+function isValidUuid(id: string): boolean {
+  // Standard UUID format
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
+  // Guest mode ID format (guest_link_xxx or guest_folder_xxx)
+  const guestIdRegex = /^guest_(link|folder)_\d+_[a-z0-9]+$/i;
+  
+  return uuidRegex.test(id) || guestIdRegex.test(id);
 }
 
 /**

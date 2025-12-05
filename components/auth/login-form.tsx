@@ -18,9 +18,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/lib/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
-import { Eye, EyeOff, Mail, Lock, User, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, AlertCircle, Loader2, CheckCircle, UserCircle } from 'lucide-react';
 import type { SignInData, SignUpData } from '@/lib/types/auth';
 import { AUTH_CONSTANTS, AUTH_ERROR_MESSAGES } from '@/constants/auth.constants';
+import { GuestModeWarningDialog } from '@/components/modals/guest-mode-warning-dialog';
+import { guestStorageService } from '@/lib/services/guest-storage.service';
 
 interface FormErrors {
   email?: string;
@@ -53,13 +55,22 @@ export function LoginForm(): React.JSX.Element {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
+  const [showGuestWarning, setShowGuestWarning] = useState(false);
 
-  // Handle URL tab parameter
+  // Handle URL tab parameter and guest mode
   useEffect(() => {
     try {
       const tab = searchParams?.get('tab');
       if (tab === 'signup') {
         setActiveTab('signup');
+      }
+
+      // Check if guest mode was requested from landing page
+      const guestParam = searchParams?.get('guest');
+      if (guestParam === 'true') {
+        setShowGuestWarning(true);
+        // Remove guest param from URL
+        router.replace('/login');
       }
 
       // Show message if session expired
@@ -277,6 +288,15 @@ export function LoginForm(): React.JSX.Element {
     }
   };
 
+
+  /**
+   * Handles guest mode activation
+   */
+  const handleGuestModeConfirm = (): void => {
+    guestStorageService.activateGuestMode();
+    setShowGuestWarning(false);
+    router.push('/app');
+  };
 
   /**
    * Handles sign up form submission with better error handling
@@ -620,8 +640,31 @@ export function LoginForm(): React.JSX.Element {
               </TabsContent>
             </div>
           </Tabs>
+
+          {/* Guest Mode Option */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => setShowGuestWarning(true)}
+              className="w-full flex items-center justify-center gap-2 h-11 border-2 border-gray-300 text-gray-600 hover:border-black hover:text-black font-mono text-xs font-bold uppercase tracking-wider rounded-none transition-all duration-200"
+              disabled={isSigningIn || isSigningUp}
+            >
+              <UserCircle className="size-4" />
+              Try Guest Mode
+            </button>
+            <p className="text-center text-xs text-gray-400 mt-2 font-mono">
+              No account needed • Data stored locally
+            </p>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Guest Mode Warning Dialog */}
+      <GuestModeWarningDialog
+        isOpen={showGuestWarning}
+        onConfirm={handleGuestModeConfirm}
+        onCancel={() => setShowGuestWarning(false)}
+      />
     </>
   );
 }

@@ -81,6 +81,13 @@ export const STORAGE_KEYS = {
   CACHE: 'linkvault_cache',
 } as const;
 
+export const GUEST_STORAGE_KEYS = {
+  SESSION: 'linksvault_guest_session',
+  LINKS: 'linksvault_guest_links',
+  FOLDERS: 'linksvault_guest_folders',
+  SETTINGS: 'linksvault_guest_settings',
+} as const;
+
 export const DEFAULT_SETTINGS = {
   theme: 'system' as const,
   viewMode: 'grid' as const,

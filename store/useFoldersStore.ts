@@ -8,8 +8,16 @@
 import { create } from 'zustand';
 import { Folder } from '@/types';
 import { supabaseDatabaseService } from '@/lib/services/supabase-database.service';
+import { guestStorageService } from '@/lib/services/guest-storage.service';
 import { sanitizeFolderData } from '@/lib/utils/sanitization';
 import { logger } from '@/lib/utils/logger';
+
+/**
+ * Helper to check if guest mode is active
+ */
+const isGuestMode = (): boolean => {
+  return guestStorageService.isGuestMode();
+};
 
 interface FoldersState {
   // State
@@ -66,6 +74,14 @@ export const useFoldersStore = create<FoldersState>((set, get) => ({
     try {
       // CRITICAL: Sanitize input data to prevent XSS
       const sanitizedData = sanitizeFolderData(folderData);
+
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        const newFolder = await guestStorageService.addFolder(sanitizedData);
+        set((state) => ({ folders: [...state.folders, newFolder] }));
+        logger.debug('Folder added in guest mode:', { id: newFolder.id, name: newFolder.name });
+        return;
+      }
 
       const tempFolder: Folder = {
         ...sanitizedData,
@@ -136,6 +152,12 @@ export const useFoldersStore = create<FoldersState>((set, get) => ({
         ),
       }));
 
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.updateFolder(id, sanitizedUpdates);
+        return;
+      }
+
       // ENHANCED: Add timeout protection with better error message
       const updatePromise = supabaseDatabaseService.updateFolder(id, sanitizedUpdates);
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -185,6 +207,13 @@ export const useFoldersStore = create<FoldersState>((set, get) => ({
       set((state) => ({
         folders: state.folders.filter((folder) => folder.id !== id),
       }));
+
+      // GUEST MODE: Use local storage instead of database
+      if (isGuestMode()) {
+        await guestStorageService.deleteFolder(id);
+        logger.debug('Folder deleted in guest mode:', { id, name: folderToDelete.name });
+        return;
+      }
 
       // ENHANCED: Add timeout protection with better error message
       const deletePromise = supabaseDatabaseService.deleteFolder(id);

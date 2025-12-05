@@ -1,0 +1,19 @@
+{
+  "extends": ["next/core-web-vitals"],
+  "rules": {
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    "react/no-unescaped-entities": "off",
+    "react/jsx-no-comment-textnodes": "off",
+    "no-console": "off",
+    "prefer-const": "warn"
+  },
+  "ignorePatterns": [
+    ".next/**",
+    "node_modules/**",
+    "out/**",
+    "build/**",
+    "dist/**",
+    "components/ui/**"
+  ]
+}

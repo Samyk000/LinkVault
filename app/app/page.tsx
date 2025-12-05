@@ -30,6 +30,7 @@ import { useSpecificFolderDescendants } from "@/hooks/use-folder-descendants";
 import { useDebounce } from "@/hooks/use-debounce";
 import { SEARCH_DEBOUNCE_DELAY } from "@/constants";
 import { useAuth } from "@/lib/contexts/auth-context";
+import { useGuestMode } from "@/lib/contexts/guest-mode-context";
 import { useRouter } from "next/navigation";
 
 /**
@@ -41,13 +42,19 @@ import { useRouter } from "next/navigation";
 export default function AppPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { isGuestMode, isLoading: guestLoading } = useGuestMode();
 
-  // Redirect to login if not authenticated (edge case: session expired during use)
+  // Redirect to login if not authenticated and not in guest mode
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace('/login?expired=true');
+    // Wait for both auth and guest mode to finish loading
+    if (authLoading || guestLoading) return;
+    
+    // Allow access if user is authenticated OR in guest mode
+    if (!user && !isGuestMode) {
+      // Don't show "session expired" - just redirect to login
+      router.replace('/login');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, isGuestMode, guestLoading, router]);
 
   // Use selective store selectors with shallow comparison to minimize re-renders
   const links = useStore((state) => state.links);
@@ -261,9 +268,12 @@ export default function AppPage() {
     });
   }, [restoreAllFromTrash, toast, filteredLinks.length]);
 
+  // Check if we're in initial loading state
+  const isInitialLoading = isLoadingData || authLoading || guestLoading || !isHydrated;
+
   // Memoize page title and title class name - use deferred values for performance
   const pageTitle = useMemo(() => {
-    if (isLoadingLinks) return 'Loading...';
+    if (isInitialLoading) return 'Loading...';
     if (deferredCurrentView === 'favorites') return 'Favorites';
     if (deferredCurrentView === 'trash') return 'Trash';
     if (deferredSelectedFolderId) {
@@ -271,7 +281,7 @@ export default function AppPage() {
       return folder?.name || 'All Links';
     }
     return 'All Links';
-  }, [deferredCurrentView, deferredSelectedFolderId, deferredFolders, isLoadingLinks]);
+  }, [deferredCurrentView, deferredSelectedFolderId, deferredFolders, isInitialLoading]);
 
   const titleClassName = useMemo(() => {
     const length = pageTitle.length;
@@ -315,7 +325,7 @@ export default function AppPage() {
                     {isLoadingData ? 'Loading...' : pageTitle}
                   </h1>
                   <span className="text-sm sm:text-base text-muted-foreground flex-shrink-0 font-medium tabular-nums">
-                    ({isLoadingData ? '...' : filteredLinks.length})
+                    ({isInitialLoading ? '...' : filteredLinks.length})
                   </span>
                 </div>
 
@@ -362,12 +372,9 @@ export default function AppPage() {
                 </div>
               )}
             </div>
-            {/* Show skeleton loading ONLY for the content area, not the persistent UI */}
-            {isLoadingData || (filteredLinks.length === 0 && folders.length === 0 && deferredLinks.length === 0) ? (
-              // Show skeleton loading when:
-              // 1. Data is actively loading (isLoadingData)
-              // 2. OR no data has loaded yet (no links, no folders, no deferred links)
-              // This ensures skeleton loading shows until actual user data is available
+            {/* Show skeleton loading when data is loading or auth/guest state is still being determined */}
+            {isLoadingData || authLoading || guestLoading || !isHydrated ? (
+              // Show skeleton loading during initial load
               <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {Array.from({ length: 12 }).map((_, i) => (
                   <div key={i} className="rounded-lg border bg-card overflow-hidden">
@@ -394,13 +401,17 @@ export default function AppPage() {
               />
             ) : filteredLinks.length === 0 ? (
               <EmptyState
-                icon={deferredCurrentView === 'favorites' ? Star : Trash2}
-                title={deferredCurrentView === 'favorites' ? "No favorites yet" : "No links found"}
+                icon={deferredCurrentView === 'favorites' ? Star : undefined}
+                title={deferredCurrentView === 'favorites' ? "No favorites yet" : "No links yet"}
                 description={
                   deferredCurrentView === 'favorites'
                     ? "Click the star icon on any link card to mark it as a favorite and see it here."
-                    : "Your links will appear here. Add your first link to get started."
+                    : "Your links will appear here. Click the 'Add Link' button to save your first link."
                 }
+                action={deferredCurrentView !== 'favorites' ? {
+                  label: "Add Your First Link",
+                  onClick: () => setAddLinkModalOpen(true)
+                } : undefined}
               />
             ) : (
               <LinkGrid

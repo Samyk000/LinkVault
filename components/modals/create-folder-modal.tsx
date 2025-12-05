@@ -28,6 +28,8 @@ import { logger } from "@/lib/utils/logger";
 import { useToast } from "@/hooks/use-toast";
 import { FOLDER_ICONS } from "@/constants/folder-icons";
 import { canAddSubFolder, getSubFolderCount, MAX_SUB_FOLDERS_PER_FOLDER } from "@/utils/folder-utils";
+import { useGuestMode } from "@/lib/contexts/guest-mode-context";
+import { UpgradePromptDialog } from "@/components/modals/upgrade-prompt-dialog";
 
 const folderSchema = z.object({
   name: z.string().min(1, "Name is required").max(30, "Name must be 30 characters or less"),
@@ -60,10 +62,17 @@ export function CreateFolderModal() {
   const isSubFolder = !!parentFolderId;
   const parentFolder = parentFolderId ? folders.find(f => f.id === parentFolderId) : null;
 
+  // Guest mode check - use context to avoid hydration issues
+  const { isGuestMode } = useGuestMode();
+  const [showUpgradePrompt, setShowUpgradePrompt] = React.useState(false);
+
   // Check if parent folder has reached the sub-folder limit
   const canAddMoreSubFolders = parentFolderId ? canAddSubFolder(parentFolderId, folders) : true;
   const currentSubFolderCount = parentFolderId ? getSubFolderCount(parentFolderId, folders) : 0;
   const hasReachedLimit = !canAddMoreSubFolders && !isEditMode;
+
+  // Guest mode restriction for sub-folders
+  const isGuestSubFolderRestricted = isGuestMode && isSubFolder && !isEditMode;
 
   const {
     register,
@@ -216,8 +225,28 @@ export function CreateFolderModal() {
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3 flex-1 min-h-0">
+          {/* Warning: Guest mode sub-folder restriction */}
+          {isGuestSubFolderRestricted && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
+              <AlertCircle className="size-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 text-sm">
+                <p className="font-medium text-amber-700">Sub-folders not available in Guest Mode</p>
+                <p className="text-xs text-amber-600/80 mt-1">
+                  Sign up for a free account to create sub-folders and organize your links hierarchically.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowUpgradePrompt(true)}
+                  className="text-xs text-amber-700 underline mt-2 hover:text-amber-800"
+                >
+                  Learn more about full features
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Warning: Sub-folder limit reached */}
-          {hasReachedLimit && (
+          {hasReachedLimit && !isGuestSubFolderRestricted && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3">
               <AlertCircle className="size-4 text-destructive flex-shrink-0 mt-0.5" />
               <div className="flex-1 text-sm">
@@ -281,7 +310,7 @@ export function CreateFolderModal() {
             <Button type="button" variant="outline" onClick={handleClose} className="h-10 px-6">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || hasReachedLimit} className="h-10 px-6">
+            <Button type="submit" disabled={isSubmitting || hasReachedLimit || isGuestSubFolderRestricted} className="h-10 px-6">
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin-gpu" />
@@ -294,6 +323,13 @@ export function CreateFolderModal() {
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Upgrade Prompt for Guest Users */}
+      <UpgradePromptDialog
+        isOpen={showUpgradePrompt}
+        feature="sub-folders"
+        onClose={() => setShowUpgradePrompt(false)}
+      />
     </Dialog>
   );
 }

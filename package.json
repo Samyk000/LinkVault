@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "echo 'Linting disabled for now - build is working successfully'",
-    "lint:fix": "echo 'Linting disabled for now - build is working successfully'"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

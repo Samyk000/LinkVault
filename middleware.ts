@@ -93,6 +93,15 @@ function isAuthPage(pathname: string): boolean {
 }
 
 /**
+ * Check if guest mode is active via cookie
+ * @param {NextRequest} request - Request object
+ * @returns {boolean} Whether guest mode is active
+ */
+function isGuestMode(request: NextRequest): boolean {
+  return request.cookies.get('guest_mode')?.value === 'true';
+}
+
+/**
  * Enhanced middleware with improved error handling and session management
  * @param {NextRequest} request - Next.js request object
  * @returns {Promise<NextResponse>} Response object
@@ -198,7 +207,14 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
     // Handle unauthenticated users trying to access protected pages
     // BUT: Don't redirect if we're already on login page (prevents redirect loops)
+    // GUEST MODE: Allow guest users to access the app without authentication
     if (!isAuthenticated && requiresAuth(pathname) && !isAuthPage(pathname)) {
+      // Check if guest mode is active - allow access without authentication
+      if (isGuestMode(request)) {
+        logger.debug('Guest mode active, allowing access to protected route');
+        return response;
+      }
+      
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirectTo', pathname);
       return NextResponse.redirect(loginUrl);

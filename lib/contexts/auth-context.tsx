@@ -12,6 +12,7 @@ import { authService } from '@/lib/services/auth';
 import { AuthUser, AuthState, SignUpData, SignInData, AuthError } from '@/lib/types/auth';
 import { logger } from '@/lib/utils/logger';
 import { recoverSession, markUserLoggedOut, clearLogoutMarker } from '@/lib/services/session-recovery.service';
+import { guestStorageService } from '@/lib/services/guest-storage.service';
 
 interface AuthContextType extends AuthState {
   signUp: (data: SignUpData) => Promise<{ error: AuthError | null }>;
@@ -132,6 +133,13 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
 
       // Clear logout marker on successful login
       clearLogoutMarker();
+
+      // Deactivate guest mode when user authenticates, but PRESERVE the data
+      // User can return to guest mode later and their data will still be there
+      if (guestStorageService.isGuestMode()) {
+        guestStorageService.deactivateGuestMode();
+        logger.info('Guest mode deactivated on authentication (data preserved)');
+      }
 
       setUser(user);
       return { error: null };

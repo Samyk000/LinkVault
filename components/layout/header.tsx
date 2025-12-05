@@ -6,7 +6,7 @@
  * @created 2025-10-18
  */
 
-import { Plus, Settings, User, LogOut, Loader2 } from "lucide-react";
+import { Plus, Settings, User, LogOut, Loader2, UserCircle, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { useStore } from "@/store/useStore";
@@ -22,18 +22,37 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/contexts/auth-context";
+import { useGuestMode } from "@/lib/contexts/guest-mode-context";
 import { useLogout } from "@/hooks/use-logout";
 import { ProfileModal } from "@/components/modals/profile-modal";
+import { useRouter } from "next/navigation";
 
 export function Header() {
   const setAddLinkModalOpen = useStore((state) => state.setAddLinkModalOpen);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const { user } = useAuth();
+  const { isGuestMode, isLoading: guestLoading, deactivateGuestMode } = useGuestMode();
   const { handleLogout, isLoggingOut } = useLogout();
+  const router = useRouter();
+
+  // Prevent hydration mismatch by only showing guest-specific UI after mount
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Handle guest logout - deactivate but keep data for when they return
+  const handleGuestLogout = () => {
+    deactivateGuestMode();
+    router.push('/login');
+  };
+
+  // Only show guest mode UI after client-side mount to prevent hydration mismatch
+  const showGuestMode = isMounted && !guestLoading && isGuestMode;
 
   // Get display name or fallback
-  const displayName = user?.profile?.display_name || user?.email?.split('@')[0] || 'User';
+  const displayName = showGuestMode ? 'Guest' : (user?.profile?.display_name || user?.email?.split('@')[0] || 'User');
   const userInitials = displayName.charAt(0).toUpperCase();
 
   // Performance monitoring
@@ -82,8 +101,8 @@ export function Header() {
                   variant="ghost"
                   className="relative h-10 w-10 rounded-full p-0 hover:bg-transparent"
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-sm ring-2 ring-background transition-transform hover:scale-105">
-                    {userInitials}
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold shadow-sm ring-2 ring-background transition-transform hover:scale-105 ${showGuestMode ? 'bg-amber-500 text-white' : 'bg-primary text-primary-foreground'}`}>
+                    {showGuestMode ? <UserCircle className="h-5 w-5" /> : userInitials}
                   </div>
                 </Button>
               </DropdownMenuTrigger>
@@ -92,32 +111,55 @@ export function Header() {
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">{displayName}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {user?.email}
+                      {showGuestMode ? 'Data stored locally' : user?.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setIsProfileModalOpen(true)} className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>My Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsSettingsOpen(true)} className="cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                  className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20"
-                >
-                  {isLoggingOut ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <LogOut className="mr-2 h-4 w-4" />
-                  )}
-                  <span>{isLoggingOut ? 'Logging out...' : 'Log out'}</span>
-                </DropdownMenuItem>
+                {showGuestMode ? (
+                  <>
+                    <DropdownMenuItem onClick={() => router.push('/login?tab=signup')} className="cursor-pointer text-primary">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Sign Up Free</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push('/login')} className="cursor-pointer">
+                      <LogIn className="mr-2 h-4 w-4" />
+                      <span>Login</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleGuestLogout}
+                      className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Exit Guest Mode</span>
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={() => setIsProfileModalOpen(true)} className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>My Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsSettingsOpen(true)} className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20"
+                    >
+                      {isLoggingOut ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <LogOut className="mr-2 h-4 w-4" />
+                      )}
+                      <span>{isLoggingOut ? 'Logging out...' : 'Log out'}</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

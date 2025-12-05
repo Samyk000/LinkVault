@@ -5,6 +5,7 @@
  */
 
 import { supabaseDatabaseService } from './supabase-database.service';
+import { guestStorageService } from './guest-storage.service';
 import { performanceMonitor } from './performance-monitor.service';
 import { logger } from '@/lib/utils/logger';
 import type { Link, Folder, AppSettings } from '@/types';
@@ -65,6 +66,29 @@ class DataLoaderService {
     } = options;
 
     const startTime = Date.now();
+
+    // GUEST MODE: Load from local storage instead of database (Requirement 9.1, 9.2, 9.3)
+    if (guestStorageService.isGuestMode()) {
+      logger.debug('Loading data in guest mode from local storage');
+      onProgress?.(50);
+      
+      // Load ALL links including deleted ones (for trash view)
+      const [links, folders] = await Promise.all([
+        guestStorageService.getAllLinksIncludingDeleted(),
+        guestStorageService.getFolders(),
+      ]);
+      
+      onProgress?.(100);
+      
+      return {
+        links: links || [],
+        folders: folders || [],
+        settings: DEFAULT_SETTINGS,
+        loadingTime: Date.now() - startTime,
+        cacheHits: 0,
+        totalRequests: 0, // No API requests in guest mode
+      };
+    }
 
     // Track loading start
     performanceMonitor.trackInteraction({

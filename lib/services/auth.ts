@@ -614,7 +614,6 @@ export class AuthService {
    * @returns {Function} Unsubscribe function
    */
   onAuthStateChange(callback: (event: string, session: any) => void) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.supabase.auth.onAuthStateChange(async (event: any, session: any) => {
       // Pass event and session directly to callback
       // The auth context will handle user fetching

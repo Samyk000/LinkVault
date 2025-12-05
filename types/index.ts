@@ -68,3 +68,12 @@ export interface MetadataResponse {
 export interface SearchFilters {
   query: string;
 }
+
+/**
+ * Guest Mode session data stored in localStorage
+ */
+export interface GuestSession {
+  isActive: boolean;
+  activatedAt: string;
+  lastAccessedAt: string;
+}

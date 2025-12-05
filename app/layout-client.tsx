@@ -3,6 +3,7 @@
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { AuthProvider, useAuth } from '@/lib/contexts/auth-context';
+import { GuestModeProvider } from '@/lib/contexts/guest-mode-context';
 import { StoreInitializer } from '@/components/providers/store-initializer';
 import { ResourceHints } from '@/components/providers/resource-hints';
 import { OfflineIndicator } from '@/components/common/offline-indicator';
@@ -21,13 +22,13 @@ interface LayoutClientProps {
  * CRITICAL: This component is completely removed in production builds
  */
 function AuthenticatedPerformanceDashboard() {
+  const { user } = useAuth();
+  
   // CRITICAL: Double-check we're in development - this should be tree-shaken in production
   // but we add runtime check as safety net
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1')) {
     return null;
   }
-
-  const { user } = useAuth();
 
   // Only render performance dashboard if user is authenticated
   if (!user) {
@@ -48,14 +49,16 @@ export function LayoutClient({ children, initialUser }: LayoutClientProps) {
       <QueryProvider>
         <ResourceHints />
         <AuthProvider initialUser={initialUser}>
-          <StoreInitializer />
-          <OfflineIndicator />
-          {children}
-          <Toaster />
-          {/* Only show PerformanceDashboard for authenticated users */}
-          <AuthenticatedPerformanceDashboard />
+          <GuestModeProvider>
+            <StoreInitializer />
+            <OfflineIndicator />
+            {children}
+            <Toaster />
+            <ShareFolderModal />
+            {/* Only show PerformanceDashboard for authenticated users */}
+            <AuthenticatedPerformanceDashboard />
+          </GuestModeProvider>
         </AuthProvider>
-        <ShareFolderModal />
       </QueryProvider>
     </ThemeProvider>
   );

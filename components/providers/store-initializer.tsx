@@ -13,7 +13,9 @@ import { useFoldersStore } from '@/store/useFoldersStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuth } from '@/lib/contexts/auth-context';
+import { useGuestMode } from '@/lib/contexts/guest-mode-context';
 import { supabaseDatabaseService } from '@/lib/services/supabase-database.service';
+import { guestStorageService } from '@/lib/services/guest-storage.service';
 import { logger } from '@/lib/utils/logger';
 import { DEFAULT_SETTINGS } from '@/constants';
 
@@ -23,9 +25,11 @@ export function StoreInitializer() {
   const { setSettings } = useSettingsStore();
   const { setHydrated, setIsLoadingData } = useUIStore();
   const { user, loading: authLoading } = useAuth();
+  const { isGuestMode, isLoading: guestLoading } = useGuestMode();
   
   // Track the last loaded user ID to detect user changes
   const lastLoadedUserId = useRef<string | null>(null);
+  const lastGuestMode = useRef<boolean>(false);
   const loadingPromise = useRef<Promise<void> | null>(null);
 
   // Memoized data loading function
@@ -67,29 +71,80 @@ export function StoreInitializer() {
     }
   }, [setLinks, setFolders, setSettings]);
 
+  // Guest mode data loading function
+  const loadGuestData = useCallback(async () => {
+    logger.debug('Loading data for guest mode');
+    
+    try {
+      // Load ALL links including deleted ones (for trash view)
+      const [links, folders] = await Promise.all([
+        guestStorageService.getAllLinksIncludingDeleted(),
+        guestStorageService.getFolders(),
+      ]);
+
+      setSettings(DEFAULT_SETTINGS);
+      setFolders(folders || []);
+      setLinks(links || []);
+      logger.debug(`Guest mode loaded: ${links?.length || 0} links, ${folders?.length || 0} folders`);
+    } catch (error) {
+      logger.error('Failed to load guest data:', error);
+      setSettings(DEFAULT_SETTINGS);
+      setFolders([]);
+      setLinks([]);
+    }
+  }, [setLinks, setFolders, setSettings]);
+
   useEffect(() => {
     // Always mark as hydrated immediately so UI can render
     setHydrated(true);
 
-    // Wait for auth to finish loading
-    if (authLoading) {
+    // Wait for auth and guest mode to finish loading
+    if (authLoading || guestLoading) {
       return;
     }
 
     const currentUserId = user?.id || null;
 
-    // Handle no user case
-    if (!currentUserId) {
-      // Clear data if user logged out
+    // Handle guest mode
+    if (isGuestMode && !currentUserId) {
+      // Guest mode is active - load guest data if not already loaded
+      if (!lastGuestMode.current || loadingPromise.current === null) {
+        logger.debug('Guest mode activated, loading guest data');
+        lastGuestMode.current = true;
+        lastLoadedUserId.current = null;
+        
+        setIsLoadingData(true);
+        loadingPromise.current = loadGuestData().finally(() => {
+          setIsLoadingData(false);
+          loadingPromise.current = null;
+        });
+      }
+      return;
+    }
+
+    // Handle no user and not guest mode
+    if (!currentUserId && !isGuestMode) {
+      // Only clear data if authenticated user logged out (not guest mode exit)
+      // Guest data is preserved in localStorage for when they return
       if (lastLoadedUserId.current !== null) {
-        logger.debug('User logged out, clearing data');
+        logger.debug('Authenticated user logged out, clearing data');
         setLinks([]);
         setFolders([]);
         setSettings(DEFAULT_SETTINGS);
         lastLoadedUserId.current = null;
       }
+      // Reset guest mode flag but don't clear UI data - it will be cleared on navigation
+      if (lastGuestMode.current) {
+        logger.debug('Guest mode deactivated, preserving data in localStorage');
+        lastGuestMode.current = false;
+      }
       setIsLoadingData(false);
       return;
+    }
+
+    // Reset guest mode flag when authenticated user logs in
+    if (currentUserId && lastGuestMode.current) {
+      lastGuestMode.current = false;
     }
 
     // Check if we need to load data for this user
@@ -110,15 +165,15 @@ export function StoreInitializer() {
       lastLoadedUserId.current = currentUserId;
     }
 
-    // Start loading
+    // Start loading (currentUserId is guaranteed to be non-null at this point)
     setIsLoadingData(true);
     
-    loadingPromise.current = loadUserData(currentUserId).finally(() => {
+    loadingPromise.current = loadUserData(currentUserId!).finally(() => {
       setIsLoadingData(false);
       loadingPromise.current = null;
     });
 
-    // Set up real-time subscriptions
+    // Set up real-time subscriptions (only for authenticated users, not guest mode)
     let unsubscribeLinks: (() => void) | null = null;
     let unsubscribeFolders: (() => void) | null = null;
 
@@ -148,7 +203,7 @@ export function StoreInitializer() {
       if (unsubscribeLinks) unsubscribeLinks();
       if (unsubscribeFolders) unsubscribeFolders();
     };
-  }, [user, authLoading, setLinks, setFolders, setSettings, setHydrated, setIsLoadingData, loadUserData]);
+  }, [user, authLoading, isGuestMode, guestLoading, setLinks, setFolders, setSettings, setHydrated, setIsLoadingData, loadUserData, loadGuestData]);
 
   return null;
 }

@@ -76,7 +76,7 @@ export function LandingPage(): React.JSX.Element {
               </p>
             </div>
 
-            <div className="mt-12 flex items-center gap-8">
+            <div className="mt-12 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
               <button
                 onClick={() => router.push('/login')}
                 className="group relative px-8 py-4 bg-[#FF4D00] text-white overflow-hidden"
@@ -86,7 +86,15 @@ export function LandingPage(): React.JSX.Element {
                   Initialize Vault <ArrowRight className="w-4 h-4" />
                 </span>
               </button>
-              <div className="hidden md:block">
+              <button
+                onClick={() => router.push('/login?guest=true')}
+                className="group relative px-6 py-3 border-2 border-black text-black bg-white overflow-hidden hover:border-[#FF4D00] transition-colors"
+              >
+                <span className="font-mono font-bold uppercase text-xs tracking-widest">
+                  Try Guest Mode
+                </span>
+              </button>
+              <div className="hidden lg:block">
                 <span className="font-mono text-xs text-gray-400 block mb-1">// AUTO-FETCH ENABLED</span>
                 <span className="font-mono text-xs text-gray-400 block">// SECURE ENCRYPTION</span>
               </div>
