@@ -31,6 +31,8 @@ export function useLogout() {
       globalCache.clear();
       if (typeof window !== 'undefined') {
         Object.keys(localStorage).forEach(key => {
+          // Don't clear cookie consent - user preference should persist
+          if (key === 'linkvault_cookie_consent') return;
           if (key.startsWith('linkvault_') || key.startsWith('supabase.')) {
             localStorage.removeItem(key);
           }

@@ -79,7 +79,7 @@ async function retryWithBackoff<T>(
  */
 function requiresAuth(pathname: string): boolean {
   if (pathname === '/') return false;
-  const publicPaths = ['/login', '/signup', '/auth', '/api/auth', '/share'];
+  const publicPaths = ['/login', '/signup', '/auth', '/api/auth', '/share', '/privacy', '/terms'];
   return !publicPaths.some(path => pathname.startsWith(path));
 }
 
@@ -214,7 +214,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         logger.debug('Guest mode active, allowing access to protected route');
         return response;
       }
-      
+
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirectTo', pathname);
       return NextResponse.redirect(loginUrl);
