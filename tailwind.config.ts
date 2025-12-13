@@ -6,34 +6,13 @@ const config: Config = {
 		"./components/**/*.{js,ts,jsx,tsx,mdx}",
 		"./app/**/*.{js,ts,jsx,tsx,mdx}",
 	],
-	darkMode: ["class", "class"],
+	darkMode: "class",
 	theme: {
 		extend: {
-			fontSize: {
-				'xs': ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.025em' }],
-				'sm': ['0.875rem', { lineHeight: '1.25rem', letterSpacing: '0.025em' }],
-				'base': ['1rem', { lineHeight: '1.5rem', letterSpacing: '0em' }],
-				'lg': ['1.125rem', { lineHeight: '1.75rem', letterSpacing: '-0.025em' }],
-				'xl': ['1.25rem', { lineHeight: '1.75rem', letterSpacing: '-0.025em' }],
-				'2xl': ['1.5rem', { lineHeight: '2rem', letterSpacing: '-0.05em' }],
-				'3xl': ['1.875rem', { lineHeight: '2.25rem', letterSpacing: '-0.05em' }],
-				'4xl': ['2.25rem', { lineHeight: '2.5rem', letterSpacing: '-0.05em' }],
-				'5xl': ['3rem', { lineHeight: '1', letterSpacing: '-0.05em' }],
-			},
-			spacing: {
-				'18': '4.5rem',
-				'88': '22rem',
-				'128': '32rem',
-			},
-			screens: {
-				'xs': '475px',
-				'sm': '640px',
-				'md': '768px',
-				'lg': '1024px',
-				'xl': '1280px',
-				'2xl': '1536px',
-			},
 			colors: {
+				brand: '#FF3E00', // International Orange
+				dark: '#050505',  // Obsidian
+				cardDark: '#0A0A0A',
 				surface: 'var(--color-surface)',
 				card: {
 					DEFAULT: 'hsl(var(--card))',
@@ -79,6 +58,34 @@ const config: Config = {
 					'5': 'hsl(var(--chart-5))'
 				}
 			},
+			fontFamily: {
+				sans: ['Inter', 'sans-serif'],
+				display: ['Space Grotesk', 'sans-serif'],
+			},
+			fontSize: {
+				'xs': ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.025em' }],
+				'sm': ['0.875rem', { lineHeight: '1.25rem', letterSpacing: '0.025em' }],
+				'base': ['1rem', { lineHeight: '1.5rem', letterSpacing: '0em' }],
+				'lg': ['1.125rem', { lineHeight: '1.75rem', letterSpacing: '-0.025em' }],
+				'xl': ['1.25rem', { lineHeight: '1.75rem', letterSpacing: '-0.025em' }],
+				'2xl': ['1.5rem', { lineHeight: '2rem', letterSpacing: '-0.05em' }],
+				'3xl': ['1.875rem', { lineHeight: '2.25rem', letterSpacing: '-0.05em' }],
+				'4xl': ['2.25rem', { lineHeight: '2.5rem', letterSpacing: '-0.05em' }],
+				'5xl': ['3rem', { lineHeight: '1', letterSpacing: '-0.05em' }],
+			},
+			spacing: {
+				'18': '4.5rem',
+				'88': '22rem',
+				'128': '32rem',
+			},
+			screens: {
+				'xs': '475px',
+				'sm': '640px',
+				'md': '768px',
+				'lg': '1024px',
+				'xl': '1280px',
+				'2xl': '1536px',
+			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
@@ -88,11 +95,11 @@ const config: Config = {
 		keyframes: {
 			marquee: {
 				'0%': { transform: 'translateX(0)' },
-				'100%': { transform: 'translateX(-50%)' },
+				'100%': { transform: 'translateX(-100%)' },
 			}
 		},
 		animation: {
-			marquee: 'marquee 20s linear infinite',
+			marquee: 'marquee 25s linear infinite',
 			'spin-slow': 'spin 3s linear infinite',
 		}
 	},

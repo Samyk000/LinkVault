@@ -23,7 +23,7 @@ export function LayoutClient({ children, initialUser }: LayoutClientProps) {
       attribute="class"
       defaultTheme="system"
       enableSystem
-      disableTransitionOnChange
+      disableTransitionOnChange={false}
     >
       <QueryProvider>
         <ResourceHints />
