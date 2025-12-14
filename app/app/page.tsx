@@ -284,14 +284,6 @@ export default function AppPage() {
     return 'All Links';
   }, [deferredCurrentView, deferredSelectedFolderId, deferredFolders, isInitialLoading]);
 
-  const titleClassName = useMemo(() => {
-    const length = pageTitle.length;
-    if (length > 30) return 'text-sm sm:text-base md:text-base lg:text-lg';
-    if (length > 20) return 'text-base sm:text-lg md:text-lg lg:text-xl';
-    if (length > 12) return 'text-lg sm:text-xl md:text-xl lg:text-2xl';
-    return 'text-xl sm:text-2xl md:text-2xl lg:text-3xl';
-  }, [pageTitle]);
-
   // Clear selection when switching views
   useEffect(() => {
     setSelectedIds([]);
@@ -311,68 +303,60 @@ export default function AppPage() {
 
   return (
     <div className="flex h-screen flex-col">
-      <Header />
+      <Header 
+        pageTitle={pageTitle}
+        itemCount={filteredLinks.length}
+        isLoading={isInitialLoading}
+        searchQuery={searchFilters.query}
+        onSearchChange={handleSearchChange}
+      />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main className="flex-1 overflow-y-auto">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-            <div className="mb-8 sm:mb-10">
-              {/* Mobile: Search first, then title below */}
-              {/* Desktop: Title left, search right */}
-              <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-center md:justify-between md:gap-6">
-                {/* Title + Count - Below search on mobile, left on desktop */}
-                <div className="flex items-baseline gap-3 sm:gap-4 min-w-0 md:order-1 md:flex-1">
-                  <h1 className={`${titleClassName} font-bold tracking-tight truncate text-foreground`}>
-                    {isLoadingData ? 'Loading...' : pageTitle}
-                  </h1>
-                  <span className="text-sm sm:text-base text-muted-foreground flex-shrink-0 font-medium tabular-nums">
-                    ({isInitialLoading ? '...' : filteredLinks.length})
-                  </span>
-                </div>
+            {/* Mobile Search Bar - Only visible on small screens */}
+            <div className="sm:hidden mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50 pointer-events-none" />
+                <Input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchFilters.query}
+                  onChange={handleSearchChange}
+                  className="pl-9 h-9 w-full bg-background border border-border/50 text-foreground hover:border-border focus:border-primary focus-visible:ring-1 focus-visible:ring-primary/50 transition-all placeholder:text-muted-foreground/50"
+                />
+              </div>
+            </div>
 
-                {/* Search Bar - Right aligned on desktop */}
-                <div className="w-full md:w-64 lg:w-72 md:order-2">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                    <Input
-                      type="text"
-                      placeholder="Search links..."
-                      value={searchFilters.query}
-                      onChange={handleSearchChange}
-                      className="pl-9 h-9 w-full bg-background border-input focus:border-primary focus-visible:ring-1 focus-visible:ring-primary transition-all shadow-sm"
-                    />
-                  </div>
+            {/* Trash Actions Row - Only in trash view */}
+            {deferredCurrentView === 'trash' && !isLoadingData && filteredLinks.length > 0 && (
+              <div className="flex justify-end mb-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowRestoreAllModal(true)}
+                    className="h-8 px-3 text-green-600 hover:text-green-700 hover:bg-green-600/10 dark:text-green-500 dark:hover:text-green-400 dark:hover:bg-green-500/10 transition-all"
+                    title="Restore all"
+                    aria-label="Restore all items"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1.5" />
+                    <span className="text-xs">Restore All</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowEmptyTrashModal(true)}
+                    className="h-8 px-3 text-destructive hover:text-destructive/90 hover:bg-destructive/10 transition-all"
+                    title="Empty trash"
+                    aria-label="Empty trash permanently"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1.5" />
+                    <span className="text-xs">Empty</span>
+                  </Button>
                 </div>
               </div>
-
-              {/* Trash Actions Row - Only in trash view, below view toggle */}
-              {deferredCurrentView === 'trash' && !isLoadingData && filteredLinks.length > 0 && (
-                <div className="flex justify-end mt-4 sm:mt-5">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowRestoreAllModal(true)}
-                      className="h-11 w-11 text-green-600 hover:text-green-700 hover:bg-green-600/10 dark:text-green-500 dark:hover:text-green-400 dark:hover:bg-green-500/10 transition-all duration-200 rounded-lg"
-                      title="Restore all"
-                      aria-label="Restore all items"
-                    >
-                      <RotateCcw className="h-5 w-5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowEmptyTrashModal(true)}
-                      className="h-11 w-11 text-destructive hover:text-destructive/90 hover:bg-destructive/10 transition-all duration-200 rounded-lg"
-                      title="Empty trash"
-                      aria-label="Empty trash permanently"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
             {/* Show skeleton loading when data is loading or auth/guest state is still being determined */}
             {isInitialLoading ? (
               // Show skeleton loading during initial load

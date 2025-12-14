@@ -61,7 +61,7 @@ export function FoldersSection({ onFolderClick }: FoldersSectionProps) {
     <div>
       {/* Persistent Folder Header - Always visible regardless of loading state */}
       <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           Folders
         </h4>
         <Button

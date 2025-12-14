@@ -92,6 +92,9 @@ const config: Config = {
 				sm: 'calc(var(--radius) - 4px)'
 			}
 		},
+		transitionTimingFunction: {
+			'out-expo': 'cubic-bezier(0.16, 1, 0.3, 1)',
+		},
 		keyframes: {
 			marquee: {
 				'0%': { transform: 'translateX(0)' },

@@ -49,7 +49,6 @@ export function FolderItem({ folder, isSubFolder = false, onFolderClick }: Folde
   } = useFolderActions();
 
   // Share modal state
-  const isShareFolderModalOpen = useStore((state) => state.isShareFolderModalOpen);
   const setShareFolderModalOpen = useStore((state) => state.setShareFolderModalOpen);
   const setFolderToShare = useStore((state) => state.setFolderToShare);
 
@@ -117,7 +116,7 @@ export function FolderItem({ folder, isSubFolder = false, onFolderClick }: Folde
 
         {/* Count Badge - Fixed Position */}
         <div className={`absolute right-8 top-0 ${isSubFolder ? 'h-8' : 'h-8'} flex items-center pointer-events-none z-30`}>
-          <span className="text-[11px] text-muted-foreground font-medium">{getFolderCount(folder.id)}</span>
+          <span className="text-[11px] text-muted-foreground font-normal">{getFolderCount(folder.id)}</span>
         </div>
 
         {/* Three-Dots Menu - Fixed Position */}

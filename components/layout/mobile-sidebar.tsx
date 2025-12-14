@@ -43,11 +43,11 @@ export function MobileSidebar() {
         <SheetContent side="left" className="w-72 p-0 [&>button]:hidden">
           <SheetHeader className="p-4 border-b flex flex-row items-center justify-between space-y-0">
             <SheetTitle>
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <span className="text-lg font-bold">L</span>
-                </div>
-                <span className="text-lg font-semibold">LinksVault</span>
+              <div className="flex items-center gap-2.5">
+                <div className="w-3.5 h-3.5 bg-[#FF3E00] rounded-sm rotate-45"></div>
+                <span className="font-bold text-lg tracking-tight">
+                  LINKSVAULT<span className="text-[#FF3E00]">.</span>
+                </span>
               </div>
             </SheetTitle>
             <SheetClose asChild>

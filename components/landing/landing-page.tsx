@@ -53,7 +53,7 @@ const Reveal = ({ children, delay = 0, className = "" }: { children: React.React
     return (
         <div
             ref={ref}
-            className={`transition-all duration-800 ease-[cubic-bezier(0.16,1,0.3,1)] transform ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'} ${className}`}
+            className={`transition-all duration-800 ease-out-expo transform ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'} ${className}`}
             style={{ transitionDelay: `${delay}ms` }}
         >
             {children}

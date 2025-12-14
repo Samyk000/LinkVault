@@ -6,8 +6,9 @@
  * @created 2025-10-18
  */
 
-import { Plus, Settings, User, LogOut, Loader2, UserCircle, LogIn } from "lucide-react";
+import { Plus, Settings, User, LogOut, Loader2, UserCircle, LogIn, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { useStore } from "@/store/useStore";
 import React, { useState } from "react";
@@ -27,7 +28,21 @@ import { useLogout } from "@/hooks/use-logout";
 import { ProfileModal } from "@/components/modals/profile-modal";
 import { useRouter } from "next/navigation";
 
-export function Header() {
+interface HeaderProps {
+  pageTitle?: string;
+  itemCount?: number;
+  isLoading?: boolean;
+  searchQuery?: string;
+  onSearchChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+export function Header({ 
+  pageTitle, 
+  itemCount, 
+  isLoading = false,
+  searchQuery = '',
+  onSearchChange 
+}: HeaderProps) {
   const setAddLinkModalOpen = useStore((state) => state.setAddLinkModalOpen);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -72,17 +87,45 @@ export function Header() {
           <MobileSidebar />
 
           {/* Logo - Hidden on mobile, shown on desktop */}
-          <div className="hidden md:flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <span className="text-lg font-bold">L</span>
-            </div>
-            <span className="text-lg font-semibold tracking-tight text-foreground">
-              LinksVault
+          <div className="hidden md:flex items-center gap-2.5 w-64 lg:w-72 flex-shrink-0">
+            <div className="w-3.5 h-3.5 bg-[#FF3E00] rounded-sm rotate-45"></div>
+            <span className="font-bold text-lg tracking-tight text-foreground">
+              LINKSVAULT<span className="text-[#FF3E00]">.</span>
             </span>
           </div>
 
+          {/* Page Title - Positioned where sidebar ends, aligned with main content */}
+          {pageTitle && (
+            <div className="flex items-center gap-2 min-w-0 -ml-2">
+              <h1 className="text-base font-normal text-foreground/80 truncate max-w-[140px] sm:max-w-[200px] md:max-w-[240px]">
+                {isLoading ? 'Loading...' : pageTitle}
+              </h1>
+              {typeof itemCount === 'number' && (
+                <span className="text-sm text-foreground/50 tabular-nums flex-shrink-0">
+                  ({isLoading ? '...' : itemCount})
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Spacer - Flexible */}
           <div className="flex-1" />
+
+          {/* Search Bar */}
+          {onSearchChange && (
+            <div className="hidden sm:block w-52 lg:w-60 mr-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50 pointer-events-none" />
+                <Input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={onSearchChange}
+                  className="pl-9 h-9 bg-background border border-border/50 text-foreground hover:border-border focus:border-primary focus-visible:ring-1 focus-visible:ring-primary/50 transition-all placeholder:text-muted-foreground/50"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
