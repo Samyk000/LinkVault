@@ -95,3 +95,23 @@ export function clearLogoutMarker(): void {
         logger.debug('Logout marker cleared');
     }
 }
+
+
+/**
+ * Check if user explicitly logged out recently
+ * CHROMIUM FIX: This is the ONLY way to know for certain that "no user" means "logged out"
+ * vs "IndexedDB not hydrated yet"
+ * @returns {boolean} True if user explicitly logged out
+ */
+export function wasUserLoggedOut(): boolean {
+    if (typeof window === 'undefined') return false;
+    
+    const logoutMarker = localStorage.getItem('user_logged_out') || 
+                         sessionStorage.getItem('user_logged_out');
+    
+    if (!logoutMarker) return false;
+    
+    const logoutTime = parseInt(logoutMarker);
+    // Consider logout valid for 30 seconds (enough time for page refresh cycle)
+    return Date.now() - logoutTime < 30000;
+}
