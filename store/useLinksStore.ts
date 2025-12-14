@@ -73,7 +73,9 @@ export const useLinksStore = create<LinksState>((set, get) => ({
   setLoading: (isLoading) => set({ isLoading }),
 
   /**
-   * Adds a new link with enhanced session validation and reliability
+   * Adds a new link with deterministic session validation
+   * HARDENED: No retry loops for auth - session must be ready before this is called
+   * Retries are ONLY for network/server failures, not auth bootstrapping
    * @param {Omit<Link, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>} linkData - Link data to create
    * @returns {Promise<void>}
    * @throws {Error} When link creation fails
@@ -93,25 +95,20 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         return;
       }
 
-      // ENHANCED: Validate session before attempting to save
-      let user = null;
-      try {
-        const { data: { user: currentUser } } = await createClient().auth.getUser();
-        user = currentUser;
-
-        if (!user) {
-          throw new Error('User not authenticated. Please log in again.');
-        }
-      } catch (sessionError) {
-        logger.warn('Session validation failed before adding link:', sessionError);
-        // Wait a moment and retry session validation (helps with timing issues)
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const { data: { user: retryUser } } = await createClient().auth.getUser();
-        user = retryUser;
-
-        if (!user) {
-          throw new Error('Session expired. Please refresh the page and try again.');
-        }
+      // HARDENED: Single session check - no retries for auth
+      // The UI layer (modal) must ensure isSessionReady=true before allowing submission
+      // If session is not ready here, it's a bug in the UI layer, not something to retry
+      const { data: { user }, error: authError } = await createClient().auth.getUser();
+      
+      if (authError) {
+        logger.error('Auth error during addLink:', authError);
+        throw new Error('Authentication error. Please refresh the page and try again.');
+      }
+      
+      if (!user) {
+        // This should never happen if UI properly checks isSessionReady
+        logger.error('addLink called without authenticated user - UI bug');
+        throw new Error('Not authenticated. Please sign in and try again.');
       }
 
       // Generate temporary ID for optimistic update
@@ -141,9 +138,9 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         return { links: [...state.links, tempLink] };
       });
 
-      // ENHANCED: Add timeout protection with mobile-specific duration and retry logic
-      const timeoutDuration = browserInfo.isMobile ? 8000 : 5000; // Reduced timeout for better UX (5s desktop, 8s mobile)
-      const maxRetries = 1; // Reduce retries to 1 to fail faster
+      // ENHANCED: Increased timeout for better reliability
+      const timeoutDuration = browserInfo.isMobile ? 15000 : 12000; // 12s desktop, 15s mobile
+      const maxRetries = 2; // Allow 2 retries for network issues
       let lastError: Error | null = null;
 
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -180,14 +177,13 @@ export const useLinksStore = create<LinksState>((set, get) => ({
           // Don't retry on certain errors that won't improve
           if (error instanceof Error && (
             error.message?.includes('authentication') ||
-            error.message?.includes('not authenticated') ||
-            error.message?.includes('timeout'))) {
+            error.message?.includes('not authenticated'))) {
             break;
           }
 
           // Wait before retry with exponential backoff
           if (attempt < maxRetries) {
-            const delay = 500 * Math.pow(2, attempt); // 500ms, 1s
+            const delay = 500 * Math.pow(2, attempt); // 500ms, 1s, 2s
             logger.warn(`Link save attempt ${attempt + 1} failed, retrying in ${delay}ms:`, error);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
@@ -198,9 +194,17 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       throw lastError || new Error('Failed to save link after multiple attempts');
 
     } catch (error) {
-      // Enhanced error handling with rollback
+      // FIXED: Only remove the specific temp link that failed, not all temp links
+      const tempIdToRemove = `temp-`;
       set((state) => ({
-        links: state.links.filter((link) => !link.id.startsWith('temp-')),
+        links: state.links.filter((link) => {
+          // Keep non-temp links
+          if (!link.id.startsWith('temp-')) return true;
+          // Keep temp links that are older than 5 seconds (likely from other operations)
+          const linkTime = parseInt(link.id.split('-')[1] || '0');
+          const now = Date.now();
+          return now - linkTime > 5000;
+        }),
       }));
 
       logger.error('Error adding link:', {

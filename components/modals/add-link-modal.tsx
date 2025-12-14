@@ -30,6 +30,8 @@ import { logger } from "@/lib/utils/logger";
 import { FolderTreeSelect } from "@/components/folders/folder-tree-select";
 import { VALIDATION_LIMITS } from "@/constants";
 import { detectMobileBrowser } from "@/lib/utils/platform";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useGuestMode } from "@/lib/contexts/guest-mode-context";
 
 // Delay before fetching metadata to avoid excessive API calls while user is typing
 const METADATA_DEBOUNCE_DELAY = 800; // ms
@@ -65,6 +67,15 @@ export function AddLinkModal() {
   const selectedFolderId = useStore((state) => state.selectedFolderId);
   const currentView = useStore((state) => state.currentView);
   const { toast } = useToast();
+  
+  // HARDENED: Check session readiness before allowing submission
+  // This ensures addLink() never needs to retry for auth reasons
+  const { isSessionReady, user } = useAuth();
+  const { isGuestMode } = useGuestMode();
+  
+  // Submission is only allowed when session is definitively ready
+  // Either: authenticated user with ready session, OR guest mode
+  const canSubmit = isGuestMode || (isSessionReady && !!user);
 
   const editingLink = editingLinkId ? links.find(l => l.id === editingLinkId) : null;
   const isEditMode = !!editingLink;
@@ -290,13 +301,23 @@ export function AddLinkModal() {
 
   /**
   * Adds a new link or updates an existing one using the provided form data, then shows a toast and closes the modal.
-  * @example
-  * saveLink({ url: "https://example.com", title: "Example", description: "Sample site", folderId: "abc123" })
-  * // Displays a success toast and closes the modal
+  * HARDENED: Checks canSubmit before proceeding - no auth retries needed
   * @param {LinkFormData} data - Object containing link details such as URL, title, description, and folder ID.
   * @returns {void} No return value.
   **/
   const onSubmit = async (data: LinkFormData) => {
+    // HARDENED: Block submission if session is not ready
+    // This should never happen if UI is correct, but defense in depth
+    if (!canSubmit) {
+      logger.error('onSubmit called when canSubmit=false - UI bug');
+      toast({
+        title: "Not ready",
+        description: "Please wait for session to initialize",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       const platform = detectPlatform(data.url);
 
@@ -342,7 +363,7 @@ export function AddLinkModal() {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save link. Please try again.';
       toast({
         title: "Error",
-        description: "Please try again",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -495,8 +516,14 @@ export function AddLinkModal() {
             <Button type="button" variant="outline" onClick={handleClose} className="h-10 px-6">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || isFetchingMetadata} className="h-10 px-6">
-              {isSubmitting ? (
+            {/* HARDENED: Button disabled until session is ready - no auth retries needed */}
+            <Button type="submit" disabled={isSubmitting || isFetchingMetadata || !canSubmit} className="h-10 px-6">
+              {!canSubmit ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin-gpu" />
+                  Initializing...
+                </>
+              ) : isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin-gpu" />
                   {isEditMode ? 'Updating...' : 'Saving...'}

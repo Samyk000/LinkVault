@@ -2,18 +2,19 @@
  * @file lib/services/session-recovery.service.ts
  * @description Fast session recovery logic for authentication
  * @created 2025-01-21
- * @updated 2025-12-04 - Simplified for faster recovery
+ * @updated 2025-12-14 - Fixed session validation to use getUser() for server-side validation
  */
 
 import { authService } from '@/lib/services/auth';
 import { AuthUser } from '@/lib/types/auth';
 import { logger } from '@/lib/utils/logger';
 
-// Short cooldown - just 5 seconds to prevent rapid retries
-const LOGOUT_COOLDOWN = 5000;
+// Short cooldown - just 3 seconds to prevent rapid retries (reduced from 5s)
+const LOGOUT_COOLDOWN = 3000;
 
 /**
- * Fast session recovery - single attempt, no retries
+ * Fast session recovery with server-side validation
+ * FIXED: Uses getUser() instead of getSession() for reliable server-side validation
  * @returns {Promise<AuthUser | null>} The authenticated user or null
  */
 export async function recoverSession(): Promise<AuthUser | null> {
@@ -25,7 +26,7 @@ export async function recoverSession(): Promise<AuthUser | null> {
                 return null;
             }
 
-            // Skip if just logged out (short 5s cooldown)
+            // Skip if just logged out (short cooldown)
             const logoutMarker = localStorage.getItem('user_logged_out');
             if (logoutMarker) {
                 const logoutTime = parseInt(logoutMarker);
@@ -38,14 +39,19 @@ export async function recoverSession(): Promise<AuthUser | null> {
             }
         }
 
-        // Single fast attempt - no retries
-        const { data: { session }, error } = await authService.getSupabaseClient().auth.getSession();
+        // CRITICAL FIX: Use getUser() for server-side validation instead of getSession()
+        // getSession() returns cached data which may be stale after page refresh
+        // getUser() validates the session with the server, ensuring reliability
+        const { data: { user }, error } = await authService.getSupabaseClient().auth.getUser();
 
-        if (error || !session?.user) {
+        if (error || !user) {
+            logger.debug('Session recovery: No valid session found');
             return null;
         }
 
-        // Return basic user immediately, profile/settings loaded separately
+        logger.debug('Session recovery: Valid session found, fetching full user data');
+        
+        // Return full user with profile/settings
         return await authService.getCurrentUser();
     } catch (error) {
         logger.warn('Session recovery failed:', error);

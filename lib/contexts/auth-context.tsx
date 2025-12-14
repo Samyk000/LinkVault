@@ -22,6 +22,8 @@ interface AuthContextType extends AuthState {
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
   clearError: () => void;
   refreshUser: () => Promise<void>;
+  /** Indicates if session is fully ready for data operations */
+  isSessionReady: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,6 +45,10 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
     loading: !initialUser,
     error: null,
   });
+  
+  // CRITICAL FIX: Track when session is truly ready for data operations
+  // This prevents race conditions where loading=false but user isn't propagated yet
+  const [isSessionReady, setIsSessionReady] = useState(!!initialUser);
 
   /**
    * Clear any authentication errors
@@ -122,6 +128,7 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
   const signIn = useCallback(async (data: SignInData): Promise<{ error: AuthError | null }> => {
     try {
       setLoading(true);
+      setIsSessionReady(false); // Mark session as not ready during sign-in
       clearError();
 
       const { user, error } = await authService.signIn(data);
@@ -142,6 +149,8 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
       }
 
       setUser(user);
+      // CRITICAL: Mark session as ready AFTER user is set
+      setIsSessionReady(true);
       return { error: null };
     } catch (error) {
       const authError = {
@@ -224,13 +233,14 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
 
     /**
      * Initialize authentication state
-     * SIMPLIFIED: Only recover session if no initial user from SSR
+     * HARDENED: Session readiness is deterministic, not timing-based
      */
     const initializeAuth = async () => {
-      // If we have an initial user from SSR, we're done
+      // If we have an initial user from SSR, we're done - session is definitively ready
       if (initialUser) {
         logger.debug('Auth initialized with SSR user');
         setState(prev => ({ ...prev, loading: false }));
+        setIsSessionReady(true);
         return;
       }
 
@@ -239,12 +249,18 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
         const user = await recoverSession();
         
         if (mounted) {
+          // HARDENED: Set both states in a single synchronous block
+          // React will batch these updates, and isSessionReady will be true
+          // when the next render occurs. No setTimeout needed.
           setState(prev => ({ 
             ...prev, 
             user: user, 
             loading: false,
             error: null 
           }));
+          // Session is ready when we have definitively determined auth state
+          // (either user exists or doesn't - both are valid "ready" states)
+          setIsSessionReady(true);
         }
       } catch (error) {
         logger.error('Error initializing auth:', error);
@@ -255,6 +271,8 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
             loading: false,
             error: null // Don't show error for failed session recovery
           }));
+          // Session is "ready" even if no user - we've definitively determined state
+          setIsSessionReady(true);
         }
       }
     };
@@ -313,6 +331,7 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
     updatePassword,
     clearError,
     refreshUser,
+    isSessionReady,
   };
 
   return (

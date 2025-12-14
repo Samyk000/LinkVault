@@ -148,7 +148,10 @@ export function LoginForm(): React.JSX.Element {
       const { error } = await signIn(signInData);
       if (!error) {
         setSignInData({ email: '', password: '' });
-        router.push('/app');
+        // HARDENED: No arbitrary delay - signIn() now guarantees session is ready
+        // The auth context sets isSessionReady=true synchronously after setUser()
+        // Navigation happens immediately; StoreInitializer will wait for isSessionReady
+        router.replace('/app');
       } else {
         let errorMessage = error.message || AUTH_ERROR_MESSAGES.UNEXPECTED_ERROR;
         if (error.message?.includes('Invalid login credentials') || error.message?.includes('Invalid email or password')) {

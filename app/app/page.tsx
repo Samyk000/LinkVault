@@ -41,20 +41,20 @@ import { useRouter } from "next/navigation";
  */
 export default function AppPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isSessionReady } = useAuth();
   const { isGuestMode, isLoading: guestLoading } = useGuestMode();
 
   // Redirect to login if not authenticated and not in guest mode
   useEffect(() => {
-    // Wait for both auth and guest mode to finish loading
-    if (authLoading || guestLoading) return;
+    // Wait for both auth and guest mode to finish loading AND session to be ready
+    if (authLoading || guestLoading || !isSessionReady) return;
     
     // Allow access if user is authenticated OR in guest mode
     if (!user && !isGuestMode) {
       // Don't show "session expired" - just redirect to login
       router.replace('/login');
     }
-  }, [user, authLoading, isGuestMode, guestLoading, router]);
+  }, [user, authLoading, isGuestMode, guestLoading, isSessionReady, router]);
 
   // Use selective store selectors with shallow comparison to minimize re-renders
   const links = useStore((state) => state.links);
@@ -269,7 +269,8 @@ export default function AppPage() {
   }, [restoreAllFromTrash, toast, filteredLinks.length]);
 
   // Check if we're in initial loading state
-  const isInitialLoading = isLoadingData || authLoading || guestLoading || !isHydrated;
+  // FIXED: Include isSessionReady to prevent premature rendering
+  const isInitialLoading = isLoadingData || authLoading || guestLoading || !isHydrated || !isSessionReady;
 
   // Memoize page title and title class name - use deferred values for performance
   const pageTitle = useMemo(() => {
@@ -373,7 +374,7 @@ export default function AppPage() {
               )}
             </div>
             {/* Show skeleton loading when data is loading or auth/guest state is still being determined */}
-            {isLoadingData || authLoading || guestLoading || !isHydrated ? (
+            {isInitialLoading ? (
               // Show skeleton loading during initial load
               <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {Array.from({ length: 12 }).map((_, i) => (

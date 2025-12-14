@@ -20,11 +20,11 @@ import { logger } from '@/lib/utils/logger';
 import { DEFAULT_SETTINGS } from '@/constants';
 
 export function StoreInitializer() {
-  const { setLinks, links } = useLinksStore();
-  const { setFolders, folders } = useFoldersStore();
+  const { setLinks } = useLinksStore();
+  const { setFolders } = useFoldersStore();
   const { setSettings } = useSettingsStore();
   const { setHydrated, setIsLoadingData } = useUIStore();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isSessionReady } = useAuth();
   const { isGuestMode, isLoading: guestLoading } = useGuestMode();
 
   // FIXED: Track initialization state to ensure first load always happens
@@ -32,8 +32,10 @@ export function StoreInitializer() {
   const lastLoadedUserId = useRef<string | null>(null);
   const lastGuestMode = useRef<boolean>(false);
   const loadingInProgress = useRef(false);
+  const hasLoadedData = useRef(false); // Track if we've successfully loaded data
 
   // Memoized data loading function with retry
+  // FIXED: Removed links.length and folders.length from dependencies to prevent circular updates
   const loadUserData = useCallback(async (userId: string) => {
     if (loadingInProgress.current) {
       logger.debug('Data load already in progress, skipping');
@@ -45,7 +47,7 @@ export function StoreInitializer() {
 
     try {
       // Load all data in parallel with timeout protection
-      const timeoutMs = 15000; // 15 second timeout
+      const timeoutMs = 20000; // 20 second timeout (increased for reliability)
       const loadPromise = Promise.all([
         supabaseDatabaseService.getSettings().catch((e) => {
           logger.warn('Failed to load settings:', e);
@@ -75,12 +77,13 @@ export function StoreInitializer() {
         setSettings(settings || DEFAULT_SETTINGS);
         setFolders(loadedFolders || []);
         setLinks(loadedLinks || []);
+        hasLoadedData.current = true; // Mark that we've successfully loaded data
         logger.debug(`Loaded: ${loadedLinks?.length || 0} links, ${loadedFolders?.length || 0} folders`);
       }
     } catch (error) {
       logger.error('Failed to load user data:', error);
-      // Set empty state on error but don't overwrite existing data if we have some
-      if (lastLoadedUserId.current === userId && links.length === 0 && folders.length === 0) {
+      // Set empty state on error only if we haven't loaded data before
+      if (lastLoadedUserId.current === userId && !hasLoadedData.current) {
         setSettings(DEFAULT_SETTINGS);
         setFolders([]);
         setLinks([]);
@@ -88,7 +91,7 @@ export function StoreInitializer() {
     } finally {
       loadingInProgress.current = false;
     }
-  }, [setLinks, setFolders, setSettings, links.length, folders.length]);
+  }, [setLinks, setFolders, setSettings]); // FIXED: Removed circular dependencies
 
   // Guest mode data loading function
   const loadGuestData = useCallback(async () => {
@@ -124,42 +127,47 @@ export function StoreInitializer() {
     // Always mark as hydrated immediately so UI can render
     setHydrated(true);
 
-    // Wait for auth and guest mode to finish loading
+    // HARDENED: Wait for auth and guest mode to finish loading
+    // Don't proceed until we have a definitive auth state
     if (authLoading || guestLoading) {
+      setIsLoadingData(true); // Show loading while auth is determining
       return;
     }
 
     const currentUserId = user?.id || null;
 
-    // FIXED: Force data load on initial mount OR when we have a user but empty data
-    const hasNoData = links.length === 0 && folders.length === 0;
-    const needsInitialLoad = isInitialMount.current && (currentUserId || isGuestMode);
-    const needsDataReload = currentUserId && hasNoData && !loadingInProgress.current;
-
-    // Handle guest mode
+    // HARDENED: Deterministic data loading conditions
+    // No timing assumptions - only load when state is definitively known
+    
+    // Case 1: Guest mode (no auth needed)
     if (isGuestMode && !currentUserId) {
-      if (!lastGuestMode.current || needsInitialLoad || needsDataReload) {
-        logger.debug('Loading guest data (initial or refresh)');
+      const shouldLoadGuest = !lastGuestMode.current || isInitialMount.current;
+      
+      if (shouldLoadGuest && !loadingInProgress.current) {
+        logger.debug('Loading guest data');
         lastGuestMode.current = true;
         lastLoadedUserId.current = null;
         isInitialMount.current = false;
+        hasLoadedData.current = false;
 
         setIsLoadingData(true);
         loadGuestData().finally(() => {
           setIsLoadingData(false);
+          hasLoadedData.current = true;
         });
       }
       return;
     }
 
-    // Handle no user and not guest mode
+    // Case 2: No user and not guest mode - clear data and stop loading
     if (!currentUserId && !isGuestMode) {
-      if (lastLoadedUserId.current !== null) {
-        logger.debug('User logged out, clearing data');
+      if (lastLoadedUserId.current !== null || isInitialMount.current) {
+        logger.debug('No user, clearing data');
         setLinks([]);
         setFolders([]);
         setSettings(DEFAULT_SETTINGS);
         lastLoadedUserId.current = null;
+        hasLoadedData.current = false;
       }
       lastGuestMode.current = false;
       isInitialMount.current = false;
@@ -167,39 +175,50 @@ export function StoreInitializer() {
       return;
     }
 
-    // Reset guest mode flag when authenticated user logs in
-    if (currentUserId && lastGuestMode.current) {
-      lastGuestMode.current = false;
-    }
-
-    // FIXED: Load data if:
-    // 1. Initial mount with user
-    // 2. User changed
-    // 3. User exists but data is empty (e.g., after page refresh)
-    const shouldLoadData =
-      needsInitialLoad ||
-      lastLoadedUserId.current !== currentUserId ||
-      needsDataReload;
-
-    if (shouldLoadData && currentUserId) {
-      logger.debug(`Loading user data: initial=${needsInitialLoad}, userChanged=${lastLoadedUserId.current !== currentUserId}, noData=${needsDataReload}`);
-      lastLoadedUserId.current = currentUserId;
-      isInitialMount.current = false;
-
+    // Case 3: Authenticated user - wait for session to be ready
+    if (currentUserId && !isSessionReady) {
+      // Session exists but not ready - keep loading state, don't fetch yet
+      logger.debug('User exists but session not ready, waiting...');
       setIsLoadingData(true);
-      loadUserData(currentUserId).finally(() => {
-        setIsLoadingData(false);
-      });
-    } else {
-      isInitialMount.current = false;
+      return;
     }
 
-    // Set up real-time subscriptions (only for authenticated users)
+    // Case 4: Authenticated user with ready session
+    if (currentUserId && isSessionReady) {
+      // Reset guest mode flag when authenticated user logs in
+      if (lastGuestMode.current) {
+        lastGuestMode.current = false;
+        hasLoadedData.current = false;
+      }
+
+      // Determine if we need to load data
+      const userChanged = lastLoadedUserId.current !== currentUserId;
+      const needsLoad = isInitialMount.current || userChanged || !hasLoadedData.current;
+
+      if (needsLoad && !loadingInProgress.current) {
+        logger.debug(`Loading user data: initial=${isInitialMount.current}, userChanged=${userChanged}, hasData=${hasLoadedData.current}`);
+        lastLoadedUserId.current = currentUserId;
+        isInitialMount.current = false;
+
+        setIsLoadingData(true);
+        loadUserData(currentUserId).finally(() => {
+          setIsLoadingData(false);
+        });
+      } else {
+        isInitialMount.current = false;
+        // Data already loaded, ensure loading state is false
+        if (!loadingInProgress.current) {
+          setIsLoadingData(false);
+        }
+      }
+    }
+
+    // Set up real-time subscriptions (only for authenticated users with ready session)
     let unsubscribeLinks: (() => void) | null = null;
     let unsubscribeFolders: (() => void) | null = null;
 
     const setupSubscriptions = () => {
-      if (!currentUserId) return;
+      if (!currentUserId || !isSessionReady) return;
 
       try {
         unsubscribeLinks = supabaseDatabaseService.subscribeToLinks((updatedLinks) => {
@@ -226,7 +245,7 @@ export function StoreInitializer() {
       if (unsubscribeLinks) unsubscribeLinks();
       if (unsubscribeFolders) unsubscribeFolders();
     };
-  }, [user, authLoading, isGuestMode, guestLoading, links.length, folders.length, setLinks, setFolders, setSettings, setHydrated, setIsLoadingData, loadUserData, loadGuestData]);
+  }, [user, authLoading, isGuestMode, guestLoading, isSessionReady, setLinks, setFolders, setSettings, setHydrated, setIsLoadingData, loadUserData, loadGuestData]);
 
   return null;
 }
