@@ -234,6 +234,8 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
     /**
      * Initialize authentication state
      * HARDENED: Session readiness is deterministic, not timing-based
+     * CHROMIUM FIX: Don't mark session as "ready" until we have a definitive answer
+     * On Chromium mobile, IndexedDB may not be ready on first getUser() call
      */
     const initializeAuth = async () => {
       // If we have an initial user from SSR, we're done - session is definitively ready
@@ -249,18 +251,20 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
         const user = await recoverSession();
         
         if (mounted) {
-          // HARDENED: Set both states in a single synchronous block
-          // React will batch these updates, and isSessionReady will be true
-          // when the next render occurs. No setTimeout needed.
           setState(prev => ({ 
             ...prev, 
             user: user, 
             loading: false,
             error: null 
           }));
-          // Session is ready when we have definitively determined auth state
-          // (either user exists or doesn't - both are valid "ready" states)
-          setIsSessionReady(true);
+          // CHROMIUM FIX: Only mark session ready if we got a user OR
+          // we're confident there's no session (handled by auth state change listener)
+          // If user is null, we'll wait for the auth state change to confirm
+          if (user) {
+            setIsSessionReady(true);
+          }
+          // If no user, isSessionReady stays false - the auth state change listener
+          // will set it to true once Supabase confirms the auth state
         }
       } catch (error) {
         logger.error('Error initializing auth:', error);
@@ -271,8 +275,7 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
             loading: false,
             error: null // Don't show error for failed session recovery
           }));
-          // Session is "ready" even if no user - we've definitively determined state
-          setIsSessionReady(true);
+          // Don't set isSessionReady here - wait for auth state change to confirm
         }
       }
     };
@@ -280,10 +283,12 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
     initializeAuth();
 
     // Listen for auth state changes from Supabase
+    // CHROMIUM FIX: This listener fires AFTER IndexedDB is hydrated, making it
+    // the authoritative source for auth state on Chromium mobile browsers
     const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
-      logger.debug('Auth state change:', event);
+      logger.debug('Auth state change:', event, session?.user?.id ? 'has user' : 'no user');
 
       if (event === 'SIGNED_IN' && session?.user) {
         // User signed in - update state immediately with basic user info
@@ -291,14 +296,31 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
         const user = await authService.getCurrentUser();
         if (user && mounted) {
           setState(prev => ({ ...prev, user, loading: false, error: null }));
+          setIsSessionReady(true);
         }
       } else if (event === 'SIGNED_OUT') {
         if (mounted) {
           setState(prev => ({ ...prev, user: null, loading: false, error: null }));
+          setIsSessionReady(true); // Session is definitively "no user"
         }
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
         // Token refreshed - no need to refetch user, just update if needed
         logger.debug('Token refreshed');
+        // Ensure session is marked ready (setIsSessionReady is idempotent)
+        setIsSessionReady(true);
+      } else if (event === 'INITIAL_SESSION') {
+        // CHROMIUM FIX: INITIAL_SESSION fires after Supabase has fully hydrated
+        // This is the authoritative signal that we know the true auth state
+        if (session?.user) {
+          const user = await authService.getCurrentUser();
+          if (user && mounted) {
+            setState(prev => ({ ...prev, user, loading: false, error: null }));
+          }
+        }
+        // Mark session ready - we now have the definitive auth state
+        if (mounted) {
+          setIsSessionReady(true);
+        }
       }
     });
 

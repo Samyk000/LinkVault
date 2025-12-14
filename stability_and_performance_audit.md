@@ -223,6 +223,9 @@ for (let attempt = 0; attempt <= maxRetries; attempt++) {
 | Skeleton loaders never persist indefinitely | ✅ | Every code path resolves loading state |
 | Add Link works on first attempt | ✅ | UI blocks until `canSubmit=true` |
 | CRUD operations explain slowness | ✅ | Loading states + increased timeouts |
+| Mobile Chrome refresh works | ✅ | `INITIAL_SESSION` event as authoritative signal |
+| Mobile Brave refresh works | ✅ | Same fix - browser-agnostic |
+| Mobile Opera continues to work | ✅ | No regression - same code path |
 
 ---
 
@@ -242,6 +245,95 @@ for (let attempt = 0; attempt <= maxRetries; attempt++) {
 - **What**: WebSocket may fail to connect
 - **Why Acceptable**: Data still loads via initial fetch
 - **Mitigation**: Logged as warning, doesn't block UI
+
+---
+
+## Issue 5: Chromium Mobile Refresh Edge Case (RESOLVED)
+
+### Problem
+On mobile Chrome and Brave browsers, refreshing an authenticated page resulted in:
+- Infinite skeleton loaders
+- User data never loading
+- No visible errors
+
+Mobile Opera worked correctly.
+
+### Root Cause Analysis
+
+**Chromium Mobile Lifecycle:**
+1. Page loads → `AuthProvider` mounts
+2. `initializeAuth()` calls `recoverSession()` → `getUser()`
+3. **IndexedDB is NOT ready yet** on Chromium mobile
+4. `getUser()` returns `null` (no error, just no user)
+5. `isSessionReady` was set to `true` (wrong - we didn't have definitive state)
+6. `StoreInitializer` sees: `isSessionReady=true`, `user=null`, `isGuestMode=false`
+7. **Case 2 triggered**: "No user and not guest mode - clear data"
+8. Later: IndexedDB hydrates, Supabase fires `INITIAL_SESSION` with real user
+9. **But**: `StoreInitializer` already resolved to "no user" and won't re-trigger
+
+**Why Opera Works:**
+Opera mobile hydrates IndexedDB earlier in the page lifecycle, so `getUser()` succeeds on the first call.
+
+### Solution
+
+**1. Don't Mark Session Ready on Null User from recoverSession()**
+
+```typescript
+// auth-context.tsx
+const user = await recoverSession();
+if (user) {
+  setIsSessionReady(true); // Only if we got a user
+}
+// If no user, wait for INITIAL_SESSION event to confirm
+```
+
+**2. Use INITIAL_SESSION as Authoritative Signal**
+
+```typescript
+// auth-context.tsx - onAuthStateChange handler
+} else if (event === 'INITIAL_SESSION') {
+  // CHROMIUM FIX: INITIAL_SESSION fires after Supabase has fully hydrated
+  // This is the authoritative signal that we know the true auth state
+  if (session?.user) {
+    const user = await authService.getCurrentUser();
+    if (user && mounted) {
+      setState(prev => ({ ...prev, user, loading: false, error: null }));
+    }
+  }
+  // Mark session ready - we now have the definitive auth state
+  setIsSessionReady(true);
+}
+```
+
+**3. StoreInitializer Stays in Loading Until Session Ready**
+
+```typescript
+// store-initializer.tsx
+if (!currentUserId && !isGuestMode) {
+  if (isSessionReady) {
+    // Session is definitively "no user" - clear data
+    logger.debug('No user (confirmed), clearing data');
+    // ... clear data
+  } else {
+    // CHROMIUM FIX: Session not ready yet - stay in loading state
+    logger.debug('No user yet, but session not ready - waiting');
+    setIsLoadingData(true);
+  }
+  return;
+}
+```
+
+### Why This Works
+
+1. **No timing assumptions**: We don't assume `getUser()` will succeed immediately
+2. **Event-driven**: `INITIAL_SESSION` is Supabase's signal that auth is fully hydrated
+3. **Reactive**: When user appears (even late), `StoreInitializer` reacts and loads data
+4. **Browser-agnostic**: Works on all browsers without UA sniffing or hacks
+
+### Architectural Lesson
+
+> Never treat a null result from storage-dependent operations as definitive on first render.
+> Use framework/library events (like `INITIAL_SESSION`) as the authoritative signal for hydration completion.
 
 ---
 

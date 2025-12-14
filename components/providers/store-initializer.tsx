@@ -159,19 +159,29 @@ export function StoreInitializer() {
       return;
     }
 
-    // Case 2: No user and not guest mode - clear data and stop loading
+    // Case 2: No user and not guest mode
+    // CHROMIUM FIX: Only clear data if session is definitively ready
+    // On Chromium mobile, isSessionReady=false means we're still waiting for IndexedDB
     if (!currentUserId && !isGuestMode) {
-      if (lastLoadedUserId.current !== null || isInitialMount.current) {
-        logger.debug('No user, clearing data');
-        setLinks([]);
-        setFolders([]);
-        setSettings(DEFAULT_SETTINGS);
-        lastLoadedUserId.current = null;
-        hasLoadedData.current = false;
+      if (isSessionReady) {
+        // Session is definitively "no user" - clear data
+        if (lastLoadedUserId.current !== null || isInitialMount.current) {
+          logger.debug('No user (confirmed), clearing data');
+          setLinks([]);
+          setFolders([]);
+          setSettings(DEFAULT_SETTINGS);
+          lastLoadedUserId.current = null;
+          hasLoadedData.current = false;
+        }
+        lastGuestMode.current = false;
+        isInitialMount.current = false;
+        setIsLoadingData(false);
+      } else {
+        // CHROMIUM FIX: Session not ready yet - stay in loading state
+        // Don't clear data or mark as initialized - user may appear later
+        logger.debug('No user yet, but session not ready - waiting for auth confirmation');
+        setIsLoadingData(true);
       }
-      lastGuestMode.current = false;
-      isInitialMount.current = false;
-      setIsLoadingData(false);
       return;
     }
 
