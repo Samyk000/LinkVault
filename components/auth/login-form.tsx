@@ -205,60 +205,60 @@ export function LoginForm(): React.JSX.Element {
   return (
     <>
       {/* Min-height ensures stability when switching tabs */}
-      <Card className="w-full max-w-[400px] mx-auto border border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-none transition-all duration-300 min-h-[560px] flex flex-col">
-        <CardHeader className="text-center pb-4 pt-8 border-b border-gray-100 flex-none">
-          <CardTitle className="text-2xl font-display font-bold text-black mb-1 uppercase tracking-tight">
+      <Card className="w-full max-w-[400px] mx-auto border border-black dark:border-white bg-white dark:bg-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] rounded-none transition-all duration-300 min-h-[560px] flex flex-col">
+        <CardHeader className="text-center pb-4 pt-8 border-b border-gray-100 dark:border-white/10 flex-none">
+          <CardTitle className="text-2xl font-display font-bold text-black dark:text-white mb-1 uppercase tracking-tight">
             {activeTab === 'signin' ? 'Welcome Back' : 'Create Account'}
           </CardTitle>
-          <CardDescription className="text-gray-500 font-mono text-[10px] uppercase tracking-wider">
+          <CardDescription className="text-gray-500 dark:text-gray-400 font-mono text-[10px] uppercase tracking-wider">
             {activeTab === 'signin' ? '// System Access' : '// New User Registration'}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="px-6 pb-6 pt-6 flex-1 flex flex-col">
           {error && (
-            <Alert className="mb-4 bg-red-50 border-red-100 py-2">
+            <Alert className="mb-4 bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20 py-2">
               <AlertCircle className="size-3 text-red-500" />
-              <AlertDescription className="text-red-600 text-xs font-mono ml-2">
+              <AlertDescription className="text-red-600 dark:text-red-400 text-xs font-mono ml-2">
                 {error.message}
               </AlertDescription>
             </Alert>
           )}
 
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'signin' | 'signup')} className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-2 mb-6 h-10 bg-gray-100 p-1 rounded-none border border-gray-200 shrink-0">
-              <TabsTrigger value="signin" className="text-[10px] font-mono font-bold uppercase text-gray-400 data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm data-[state=active]:border-black border border-transparent rounded-none transition-all">Sign In</TabsTrigger>
-              <TabsTrigger value="signup" className="text-[10px] font-mono font-bold uppercase text-gray-400 data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm data-[state=active]:border-black border border-transparent rounded-none transition-all">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-6 h-10 bg-gray-100 dark:bg-[#111] p-1 rounded-none border border-gray-200 dark:border-white/10 shrink-0">
+              <TabsTrigger value="signin" className="text-[10px] font-mono font-bold uppercase text-gray-400 data-[state=active]:bg-white dark:data-[state=active]:bg-white data-[state=active]:text-black dark:data-[state=active]:text-black data-[state=active]:shadow-sm data-[state=active]:border-black dark:data-[state=active]:border-white border border-transparent rounded-none transition-all">Sign In</TabsTrigger>
+              <TabsTrigger value="signup" className="text-[10px] font-mono font-bold uppercase text-gray-400 data-[state=active]:bg-white dark:data-[state=active]:bg-white data-[state=active]:text-black dark:data-[state=active]:text-black data-[state=active]:shadow-sm data-[state=active]:border-black dark:data-[state=active]:border-white border border-transparent rounded-none transition-all">Sign Up</TabsTrigger>
             </TabsList>
 
             <div className="flex-1">
               <TabsContent value="signin" className="mt-0 transition-opacity duration-300 data-[state=inactive]:hidden data-[state=active]:block animate-in fade-in slide-in-from-right-4">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="signin-email" className="text-[10px] font-mono font-bold uppercase text-gray-500">Email</Label>
+                    <Label htmlFor="signin-email" className="text-[10px] font-mono font-bold uppercase text-gray-500 dark:text-gray-400">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
                       <Input id="signin-email" type="email" value={signInData.email} onChange={(e) => handleSignInEmailChange(e.target.value)}
-                        className={`pl-9 h-10 rounded-none bg-gray-50 border-gray-200 focus:border-black font-mono text-sm ${formErrors.email ? 'border-red-500' : ''}`} placeholder="user@example.com" />
+                        className={`pl-9 h-10 rounded-none bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-white/10 focus:border-black dark:focus:border-white font-mono text-sm dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 ${formErrors.email ? 'border-red-500' : ''}`} placeholder="user@example.com" />
                     </div>
                     {formErrors.email && <p className="text-[10px] text-red-500 font-mono">{formErrors.email}</p>}
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="signin-password" className="text-[10px] font-mono font-bold uppercase text-gray-500">Password</Label>
+                    <Label htmlFor="signin-password" className="text-[10px] font-mono font-bold uppercase text-gray-500 dark:text-gray-400">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
                       <Input id="signin-password" type={showPassword ? 'text' : 'password'} value={signInData.password} onChange={(e) => handleSignInPasswordChange(e.target.value)}
-                        className={`pl-9 h-10 rounded-none bg-gray-50 border-gray-200 focus:border-black font-mono text-sm ${formErrors.password ? 'border-red-500' : ''}`} placeholder="••••••••" />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black">
+                        className={`pl-9 h-10 rounded-none bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-white/10 focus:border-black dark:focus:border-white font-mono text-sm dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 ${formErrors.password ? 'border-red-500' : ''}`} placeholder="••••••••" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black dark:hover:text-white">
                         {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                       </button>
                     </div>
                     {formErrors.password && <p className="text-[10px] text-red-500 font-mono">{formErrors.password}</p>}
                   </div>
 
-                  <AnimatedButton type="submit" disabled={isSigningIn} variant="primary" className="mt-4">
-                    {isSigningIn ? <div className="animate-spin-imp rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div> : 'Enter Vault'}
+                  <AnimatedButton type="submit" disabled={isSigningIn} variant="primary" className="mt-4 dark:bg-white dark:text-black dark:hover:bg-gray-200">
+                    {isSigningIn ? <div className="animate-spin-imp rounded-full h-4 w-4 border-2 border-white/20 border-t-white dark:border-black/20 dark:border-t-black"></div> : 'Enter Vault'}
                   </AnimatedButton>
                 </form>
               </TabsContent>
@@ -269,7 +269,7 @@ export function LoginForm(): React.JSX.Element {
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
                       <Input id="signup-name" type="text" value={signUpData.displayName} onChange={(e) => handleSignUpNameChange(e.target.value)}
-                        className={`pl-9 h-10 rounded-none bg-gray-50 border-gray-200 focus:border-black font-mono text-sm ${formErrors.displayName ? 'border-red-500' : ''}`} placeholder="Display Name" />
+                        className={`pl-9 h-10 rounded-none bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-white/10 focus:border-black dark:focus:border-white font-mono text-sm dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 ${formErrors.displayName ? 'border-red-500' : ''}`} placeholder="Display Name" />
                     </div>
                     {formErrors.displayName && <p className="text-[10px] text-red-500 font-mono">{formErrors.displayName}</p>}
                   </div>
@@ -278,7 +278,7 @@ export function LoginForm(): React.JSX.Element {
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
                       <Input id="signup-email" type="email" value={signUpData.email} onChange={(e) => handleSignUpEmailChange(e.target.value)}
-                        className={`pl-9 h-10 rounded-none bg-gray-50 border-gray-200 focus:border-black font-mono text-sm ${formErrors.email ? 'border-red-500' : ''}`} placeholder="Email" />
+                        className={`pl-9 h-10 rounded-none bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-white/10 focus:border-black dark:focus:border-white font-mono text-sm dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 ${formErrors.email ? 'border-red-500' : ''}`} placeholder="Email" />
                     </div>
                     {formErrors.email && <p className="text-[10px] text-red-500 font-mono">{formErrors.email}</p>}
                   </div>
@@ -287,7 +287,7 @@ export function LoginForm(): React.JSX.Element {
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
                       <Input id="signup-password" type={showPassword ? 'text' : 'password'} value={signUpData.password} onChange={(e) => handleSignUpPasswordChange(e.target.value)}
-                        className={`pl-9 h-10 rounded-none bg-gray-50 border-gray-200 focus:border-black font-mono text-sm ${formErrors.password ? 'border-red-500' : ''}`} placeholder="Password (Min 8)" />
+                        className={`pl-9 h-10 rounded-none bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-white/10 focus:border-black dark:focus:border-white font-mono text-sm dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 ${formErrors.password ? 'border-red-500' : ''}`} placeholder="Password (Min 8)" />
                     </div>
                     {formErrors.password && <p className="text-[10px] text-red-500 font-mono">{formErrors.password}</p>}
                   </div>
@@ -295,13 +295,13 @@ export function LoginForm(): React.JSX.Element {
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
                       <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => handleConfirmPasswordChange(e.target.value)}
-                        className={`pl-9 h-10 rounded-none bg-gray-50 border-gray-200 focus:border-black font-mono text-sm ${formErrors.confirmPassword ? 'border-red-500' : ''}`} placeholder="Confirm Password" />
+                        className={`pl-9 h-10 rounded-none bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-white/10 focus:border-black dark:focus:border-white font-mono text-sm dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 ${formErrors.confirmPassword ? 'border-red-500' : ''}`} placeholder="Confirm Password" />
                     </div>
                     {formErrors.confirmPassword && <p className="text-[10px] text-red-500 font-mono">{formErrors.confirmPassword}</p>}
                   </div>
 
-                  <AnimatedButton type="submit" disabled={isSigningUp} variant="primary" className="mt-4 bg-black" hoverColor="bg-[#FF4D00]">
-                    {isSigningUp ? <div className="animate-spin-imp rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div> : 'Create Account'}
+                  <AnimatedButton type="submit" disabled={isSigningUp} variant="primary" className="mt-4 bg-black dark:bg-white text-white dark:text-black" hoverColor="bg-[#FF4D00]">
+                    {isSigningUp ? <div className="animate-spin-imp rounded-full h-4 w-4 border-2 border-white/20 border-t-white dark:border-black/20 dark:border-t-black"></div> : 'Create Account'}
                   </AnimatedButton>
                 </form>
               </TabsContent>
@@ -309,11 +309,11 @@ export function LoginForm(): React.JSX.Element {
           </Tabs>
 
           {/* Guest Mode Option - Pushed to bottom */}
-          <div className="mt-auto pt-4 border-t border-gray-100">
+          <div className="mt-auto pt-4 border-t border-gray-100 dark:border-white/10">
             <button
               type="button"
               onClick={() => setShowGuestWarning(true)}
-              className="w-full group flex items-center justify-center gap-2 h-10 border border-gray-200 text-gray-500 hover:border-black hover:text-black hover:bg-gray-50 font-mono text-[10px] font-bold uppercase tracking-wider rounded-none transition-all duration-200"
+              className="w-full group flex items-center justify-center gap-2 h-10 border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#111] font-mono text-[10px] font-bold uppercase tracking-wider rounded-none transition-all duration-200"
               disabled={isSigningIn || isSigningUp}
             >
               <UserCircle className="size-3.5 group-hover:text-[#FF4D00] transition-colors" />
@@ -326,8 +326,8 @@ export function LoginForm(): React.JSX.Element {
       </Card>
 
       <div className="max-w-xs mx-auto text-center mt-6">
-        <p className="text-[10px] text-gray-400 font-mono leading-relaxed">
-          By proceeding, you agree to our <a href="/terms" className="underline hover:text-black">Terms</a> & <a href="/privacy" className="underline hover:text-black">Privacy</a>.
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono leading-relaxed">
+          By proceeding, you agree to our <a href="/terms" className="underline hover:text-black dark:hover:text-white">Terms</a> & <a href="/privacy" className="underline hover:text-black dark:hover:text-white">Privacy</a>.
         </p>
       </div>
 
