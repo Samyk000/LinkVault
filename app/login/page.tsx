@@ -79,18 +79,16 @@ export default function LoginPage(): React.JSX.Element {
         backgroundSize: '60px 60px'
       }}></div>
 
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 w-full z-50 py-6 pointer-events-none">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 flex items-center justify-between">
-          <Link href="/" className="pointer-events-auto flex items-center gap-2 group">
-            <span className="font-display font-bold text-xl tracking-tight uppercase flex items-baseline gap-1 group-hover:opacity-80 transition-opacity">
-              LinksVault
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FF4D00] animate-pulse"></span>
-            </span>
+      {/* Navigation - Unified Style */}
+      <nav className="fixed w-full z-50 top-0 left-0 bg-white/80 backdrop-blur-md border-b border-gray-100 transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-6 h-16 md:h-20 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="w-4 h-4 bg-[#FF3E00] rounded-sm rotate-45"></div>
+            <span className="font-bold text-xl tracking-tight">LINKSVAULT<span className="text-[#FF3E00]">.</span></span>
           </Link>
 
-          <Link href="/" className="pointer-events-auto flex items-center gap-2 group">
-            <span className="font-mono text-xs font-bold uppercase tracking-wider hover:text-[#FF4D00] transition-colors">
+          <Link href="/" className="flex items-center gap-2 group">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider hover:text-[#FF3E00] transition-colors">
               Back to Home
             </span>
           </Link>
@@ -158,7 +156,7 @@ export default function LoginPage(): React.JSX.Element {
           <div className="w-full max-w-md relative">
             <Suspense fallback={
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin-gpu rounded-full h-8 w-8 border-b-2 border-[#FF4D00]"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF3E00]"></div>
               </div>
             }>
               <LoginForm />

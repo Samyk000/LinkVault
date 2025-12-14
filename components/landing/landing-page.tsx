@@ -680,9 +680,9 @@ export function LandingPage(): React.JSX.Element {
             {/* Navigation */}
             <nav className="fixed w-full z-50 top-0 left-0 bg-white/80 dark:bg-[#050505]/80 backdrop-blur-md border-b border-gray-100 dark:border-white/10 transition-all duration-300">
                 <div className="max-w-7xl mx-auto px-6 h-16 md:h-20 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 bg-[#FF3E00] rounded-sm rotate-45"></div>
-                        <span className="font-bold text-lg tracking-tight">LINKSVAULT<span className="text-[#FF3E00]">.</span></span>
+                    <div className="flex items-center gap-3">
+                        <div className="w-4 h-4 bg-[#FF3E00] rounded-sm rotate-45"></div>
+                        <span className="font-bold text-xl tracking-tight">LINKSVAULT<span className="text-[#FF3E00]">.</span></span>
                     </div>
 
                     <div className="flex items-center gap-6">
@@ -939,8 +939,8 @@ export function LandingPage(): React.JSX.Element {
                     <div className="flex flex-col md:flex-row justify-between text-[10px] font-mono text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                         <div>&copy; 2025 Linksvault Inc.</div>
                         <div className="flex gap-6 mt-4 md:mt-0">
-                            <Link href="/privacy" className="hover:text-black dark:hover:text-white">Privacy</Link>
-                            <Link href="/terms" className="hover:text-black dark:hover:text-white">Terms</Link>
+                            <Link href="/privacy?source=landing" className="hover:text-black dark:hover:text-white">Privacy</Link>
+                            <Link href="/terms?source=landing" className="hover:text-black dark:hover:text-white">Terms</Link>
                             <span className="text-green-600">● All Systems Normal</span>
                         </div>
                     </div>

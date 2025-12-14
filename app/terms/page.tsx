@@ -7,7 +7,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { BackButton } from '@/components/ui/back-button';
 
 export const metadata: Metadata = {
     title: 'Terms of Service | Linksvault',
@@ -18,12 +18,7 @@ export default function TermsOfServicePage() {
     return (
         <div className="min-h-screen bg-background">
             <div className="max-w-3xl mx-auto px-4 py-12">
-                <Button variant="ghost" asChild className="mb-8">
-                    <Link href="/login" className="flex items-center gap-2">
-                        <ArrowLeft className="size-4" />
-                        Back to Login
-                    </Link>
-                </Button>
+                <BackButton />
 
                 <h1 className="text-3xl font-bold mb-8">Terms of Service</h1>
 

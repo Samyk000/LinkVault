@@ -231,8 +231,8 @@ export function LoginForm(): React.JSX.Element {
               <TabsTrigger value="signup" className="text-[10px] font-mono font-bold uppercase text-gray-400 data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm data-[state=active]:border-black border border-transparent rounded-none transition-all">Sign Up</TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 relative">
-              <TabsContent value="signin" className="mt-0 absolute inset-0 transition-opacity duration-300 data-[state=inactive]:opacity-0 data-[state=active]:opacity-100">
+            <div className="flex-1">
+              <TabsContent value="signin" className="mt-0 transition-opacity duration-300 data-[state=inactive]:hidden data-[state=active]:block animate-in fade-in slide-in-from-right-4">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="signin-email" className="text-[10px] font-mono font-bold uppercase text-gray-500">Email</Label>
@@ -258,12 +258,12 @@ export function LoginForm(): React.JSX.Element {
                   </div>
 
                   <AnimatedButton type="submit" disabled={isSigningIn} variant="primary" className="mt-4">
-                    {isSigningIn ? <Loader2 className="size-4 animate-spin text-white z-30" /> : 'Enter Vault'}
+                    {isSigningIn ? <div className="animate-spin-imp rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div> : 'Enter Vault'}
                   </AnimatedButton>
                 </form>
               </TabsContent>
 
-              <TabsContent value="signup" className="mt-0 absolute inset-0 transition-opacity duration-300 data-[state=inactive]:opacity-0 data-[state=active]:opacity-100">
+              <TabsContent value="signup" className="mt-0 transition-opacity duration-300 data-[state=inactive]:hidden data-[state=active]:block animate-in fade-in slide-in-from-right-4">
                 <form onSubmit={handleSignUp} className="space-y-3">
                   <div className="space-y-1">
                     <div className="relative">
@@ -301,7 +301,7 @@ export function LoginForm(): React.JSX.Element {
                   </div>
 
                   <AnimatedButton type="submit" disabled={isSigningUp} variant="primary" className="mt-4 bg-black" hoverColor="bg-[#FF4D00]">
-                    {isSigningUp ? <Loader2 className="size-4 animate-spin text-white z-30" /> : 'Create Account'}
+                    {isSigningUp ? <div className="animate-spin-imp rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div> : 'Create Account'}
                   </AnimatedButton>
                 </form>
               </TabsContent>
