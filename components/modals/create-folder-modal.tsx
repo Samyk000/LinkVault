@@ -119,11 +119,24 @@ export function CreateFolderModal() {
   * @returns {{void}} Returns nothing.
   **/
   const onSubmit = async (data: FolderFormData) => {
+    // PHASE 2B FIX: Safety timeout to prevent stuck loading state
+    const safetyTimeout = setTimeout(() => {
+      logger.warn('[CreateFolder] Safety timeout triggered - clearing stuck state');
+      toast({
+        title: "Request timeout",
+        description: "The operation took too long. Please try again.",
+        variant: "destructive",
+        icon: <AlertCircle className="size-4" />,
+      });
+      handleClose();
+    }, 20000); // 20 second safety timeout
+
     try {
       // Validate: Cannot create sub-folder inside a sub-folder
       if (!isEditMode && parentFolderId) {
         const parent = folders.find(f => f.id === parentFolderId);
         if (parent?.parentId !== null) {
+          clearTimeout(safetyTimeout);
           toast({
             title: "Invalid location",
             description: "Sub-folders can only be created under main folders",
@@ -136,6 +149,7 @@ export function CreateFolderModal() {
         // Validate sub-folder limit (now 10)
         if (!canAddSubFolder(parentFolderId, folders)) {
           const count = getSubFolderCount(parentFolderId, folders);
+          clearTimeout(safetyTimeout);
           toast({
             title: "Limit reached",
             description: `Maximum ${MAX_SUB_FOLDERS_PER_FOLDER} sub-folders allowed`,
@@ -157,6 +171,7 @@ export function CreateFolderModal() {
           color: color,
         });
 
+        clearTimeout(safetyTimeout);
         toast({
           title: "Folder updated",
           variant: "success",
@@ -175,6 +190,7 @@ export function CreateFolderModal() {
           isPlatformFolder: false,
         });
 
+        clearTimeout(safetyTimeout);
         toast({
           title: "Folder created",
           variant: "success",
@@ -184,6 +200,7 @@ export function CreateFolderModal() {
         handleClose();
       }
     } catch (error) {
+      clearTimeout(safetyTimeout);
       logger.error('Error saving folder:', error);
 
       // OPTIMIZED: Handle duplicate folder name error
@@ -193,9 +210,15 @@ export function CreateFolderModal() {
         error.message?.includes('unique')
       );
 
+      const isTimeout = error instanceof Error && error.message?.includes('timeout');
+
       toast({
-        title: isDuplicate ? "Duplicate folder" : "Error",
-        description: isDuplicate ? "A folder with this name already exists" : "Please try again",
+        title: isDuplicate ? "Duplicate folder" : isTimeout ? "Request timeout" : "Error",
+        description: isDuplicate 
+          ? "A folder with this name already exists" 
+          : isTimeout 
+            ? "The operation took too long. Please check your connection and try again."
+            : (error instanceof Error ? error.message : "Please try again"),
         variant: "destructive",
         icon: <AlertCircle className="size-4" />,
       });

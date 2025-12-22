@@ -318,6 +318,17 @@ export function AddLinkModal() {
       return;
     }
     
+    // PHASE 2B FIX: Safety timeout to prevent stuck loading state
+    const safetyTimeout = setTimeout(() => {
+      logger.warn('[AddLink] Safety timeout triggered - clearing stuck state');
+      toast({
+        title: "Request timeout",
+        description: "The operation took too long. Please try again.",
+        variant: "destructive",
+      });
+      handleClose();
+    }, 25000); // 25 second safety timeout (longer than the internal retry timeouts)
+    
     try {
       const platform = detectPlatform(data.url);
 
@@ -333,6 +344,7 @@ export function AddLinkModal() {
           isFavorite: editingLink.isFavorite,
         });
 
+        clearTimeout(safetyTimeout);
         toast({
           title: "Link updated",
           variant: "success",
@@ -350,6 +362,7 @@ export function AddLinkModal() {
           isFavorite: false,
         });
 
+        clearTimeout(safetyTimeout);
         toast({
           title: "Link added",
           variant: "success",
@@ -359,10 +372,16 @@ export function AddLinkModal() {
 
       handleClose();
     } catch (error) {
+      clearTimeout(safetyTimeout);
       logger.error('Error saving link:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save link. Please try again.';
+      
+      const isTimeout = error instanceof Error && error.message?.includes('timeout');
+      const errorMessage = isTimeout 
+        ? 'The operation took too long. Please check your connection and try again.'
+        : (error instanceof Error ? error.message : 'Failed to save link. Please try again.');
+      
       toast({
-        title: "Error",
+        title: isTimeout ? "Request timeout" : "Error",
         description: errorMessage,
         variant: "destructive",
       });

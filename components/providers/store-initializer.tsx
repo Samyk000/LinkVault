@@ -4,7 +4,7 @@
  * @file components/providers/store-initializer.tsx
  * @description Initializes store from Supabase and sets up real-time sync
  * @created 2025-10-18
- * @updated 2025-12-06 - Fixed data loading on page refresh
+ * @updated 2025-12-17 - Added visibility change listener for extension sync
  */
 
 import { useEffect, useRef, useCallback } from 'react';
@@ -33,17 +33,21 @@ export function StoreInitializer() {
   const lastGuestMode = useRef<boolean>(false);
   const loadingInProgress = useRef(false);
   const hasLoadedData = useRef(false); // Track if we've successfully loaded data
+  const lastVisibilityRefresh = useRef<number>(0); // Track last refresh time
+  const lastSessionReadyState = useRef<boolean>(false); // Track session ready state changes
 
   // Memoized data loading function with retry
   // FIXED: Removed links.length and folders.length from dependencies to prevent circular updates
-  const loadUserData = useCallback(async (userId: string) => {
+  const loadUserData = useCallback(async (userId: string, isQuietRefresh = false) => {
     if (loadingInProgress.current) {
       logger.debug('Data load already in progress, skipping');
       return;
     }
 
     loadingInProgress.current = true;
-    logger.debug('Loading data for user:', userId);
+    if (!isQuietRefresh) {
+      logger.debug('Loading data for user:', userId);
+    }
 
     try {
       // Load all data in parallel with timeout protection
@@ -78,7 +82,9 @@ export function StoreInitializer() {
         setFolders(loadedFolders || []);
         setLinks(loadedLinks || []);
         hasLoadedData.current = true; // Mark that we've successfully loaded data
-        logger.debug(`Loaded: ${loadedLinks?.length || 0} links, ${loadedFolders?.length || 0} folders`);
+        if (!isQuietRefresh) {
+          logger.debug(`Loaded: ${loadedLinks?.length || 0} links, ${loadedFolders?.length || 0} folders`);
+        }
       }
     } catch (error) {
       logger.error('Failed to load user data:', error);
@@ -92,6 +98,54 @@ export function StoreInitializer() {
       loadingInProgress.current = false;
     }
   }, [setLinks, setFolders, setSettings]); // FIXED: Removed circular dependencies
+
+  // Force refresh links from database (bypasses any caching)
+  const forceRefreshLinks = useCallback(async (userId: string) => {
+    if (loadingInProgress.current) {
+      return; // Don't double-load
+    }
+
+    try {
+      // Direct database call - bypasses cache by using a fresh query
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+
+      const { data: linksData, error } = await supabase
+        .from('links')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        logger.warn('Force refresh links failed:', error.message);
+        return;
+      }
+
+      if (linksData && lastLoadedUserId.current === userId) {
+        // Transform database format to app format
+        const transformedLinks = linksData.map((dbLink: any) => ({
+          id: dbLink.id,
+          url: dbLink.url,
+          title: dbLink.title || '',
+          description: dbLink.description || '',
+          thumbnail: dbLink.thumbnail || null,
+          faviconUrl: dbLink.favicon_url || null,
+          platform: dbLink.platform || 'other',
+          folderId: dbLink.folder_id || null,
+          isFavorite: dbLink.is_favorite || false,
+          tags: dbLink.tags || [],
+          createdAt: dbLink.created_at,
+          updatedAt: dbLink.updated_at,
+          deletedAt: dbLink.deleted_at || null,
+        }));
+
+        setLinks(transformedLinks);
+        logger.debug(`Force refreshed ${transformedLinks.length} links`);
+      }
+    } catch (error) {
+      logger.warn('Force refresh error');
+    }
+  }, [setLinks]);
 
   // Guest mode data loading function
   const loadGuestData = useCallback(async () => {
@@ -123,6 +177,64 @@ export function StoreInitializer() {
     }
   }, [setLinks, setFolders, setSettings]);
 
+  // EXTENSION SYNC FIX: Visibility change handler to refresh data when tab gains focus
+  // This ensures links saved via the extension appear immediately
+  useEffect(() => {
+    if (!user?.id || !isSessionReady) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const now = Date.now();
+        const timeSinceLastRefresh = now - lastVisibilityRefresh.current;
+
+        // Only refresh if at least 3 seconds have passed since last refresh
+        // Reduced from 5s to 3s for faster sync
+        if (timeSinceLastRefresh > 3000 && user?.id) {
+          lastVisibilityRefresh.current = now;
+          // Force refresh links (bypasses cache)
+          forceRefreshLinks(user.id);
+        }
+      }
+    };
+
+    // Also handle window focus for cross-tab sync
+    const handleFocus = () => {
+      const now = Date.now();
+      const timeSinceLastRefresh = now - lastVisibilityRefresh.current;
+
+      if (timeSinceLastRefresh > 3000 && user?.id) {
+        lastVisibilityRefresh.current = now;
+        forceRefreshLinks(user.id);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user?.id, isSessionReady, forceRefreshLinks]);
+
+  // PHASE 2B FIX: Handle session ready state transition
+  // When isSessionReady transitions from false to true, trigger data load if needed
+  useEffect(() => {
+    const wasReady = lastSessionReadyState.current;
+    lastSessionReadyState.current = isSessionReady;
+
+    // Only act on transition from not-ready to ready
+    if (!wasReady && isSessionReady && user?.id && !loadingInProgress.current && !hasLoadedData.current) {
+      logger.debug('[DashboardLoad] Session became ready, triggering data load');
+      lastLoadedUserId.current = user.id;
+      setIsLoadingData(true);
+      loadUserData(user.id).finally(() => {
+        setIsLoadingData(false);
+        logger.debug('[DashboardLoad] Session-ready triggered load complete');
+      });
+    }
+  }, [isSessionReady, user?.id, loadUserData, setIsLoadingData]);
+
   useEffect(() => {
     // Always mark as hydrated immediately so UI can render
     setHydrated(true);
@@ -136,15 +248,26 @@ export function StoreInitializer() {
 
     const currentUserId = user?.id || null;
 
+    // [DashboardLoad] Log state for debugging
+    logger.debug('[DashboardLoad] state check', {
+      currentUserId: currentUserId ? 'present' : 'null',
+      isSessionReady,
+      isGuestMode,
+      hasLoadedData: hasLoadedData.current,
+      lastLoadedUserId: lastLoadedUserId.current,
+      isInitialMount: isInitialMount.current,
+      loadingInProgress: loadingInProgress.current
+    });
+
     // HARDENED: Deterministic data loading conditions
     // No timing assumptions - only load when state is definitively known
-    
+
     // Case 1: Guest mode (no auth needed)
     if (isGuestMode && !currentUserId) {
       const shouldLoadGuest = !lastGuestMode.current || isInitialMount.current;
-      
+
       if (shouldLoadGuest && !loadingInProgress.current) {
-        logger.debug('Loading guest data');
+        logger.debug('[DashboardLoad] Loading guest data');
         lastGuestMode.current = true;
         lastLoadedUserId.current = null;
         isInitialMount.current = false;
@@ -166,7 +289,7 @@ export function StoreInitializer() {
       if (isSessionReady) {
         // Session is definitively "no user" - clear data
         if (lastLoadedUserId.current !== null || isInitialMount.current) {
-          logger.debug('No user (confirmed), clearing data');
+          logger.debug('[DashboardLoad] No user (confirmed), clearing data');
           setLinks([]);
           setFolders([]);
           setSettings(DEFAULT_SETTINGS);
@@ -179,7 +302,7 @@ export function StoreInitializer() {
       } else {
         // CHROMIUM FIX: Session not ready yet - stay in loading state
         // Don't clear data or mark as initialized - user may appear later
-        logger.debug('No user yet, but session not ready - waiting for auth confirmation');
+        logger.debug('[DashboardLoad] No user yet, but session not ready - waiting for auth confirmation');
         setIsLoadingData(true);
       }
       return;
@@ -188,7 +311,7 @@ export function StoreInitializer() {
     // Case 3: Authenticated user - wait for session to be ready
     if (currentUserId && !isSessionReady) {
       // Session exists but not ready - keep loading state, don't fetch yet
-      logger.debug('User exists but session not ready, waiting...');
+      logger.debug('[DashboardLoad] User exists but session not ready, waiting...');
       setIsLoadingData(true);
       return;
     }
@@ -206,13 +329,14 @@ export function StoreInitializer() {
       const needsLoad = isInitialMount.current || userChanged || !hasLoadedData.current;
 
       if (needsLoad && !loadingInProgress.current) {
-        logger.debug(`Loading user data: initial=${isInitialMount.current}, userChanged=${userChanged}, hasData=${hasLoadedData.current}`);
+        logger.debug(`[DashboardLoad] Loading user data: initial=${isInitialMount.current}, userChanged=${userChanged}, hasData=${hasLoadedData.current}`);
         lastLoadedUserId.current = currentUserId;
         isInitialMount.current = false;
 
         setIsLoadingData(true);
         loadUserData(currentUserId).finally(() => {
           setIsLoadingData(false);
+          logger.debug('[DashboardLoad] Data load complete');
         });
       } else {
         isInitialMount.current = false;
@@ -259,3 +383,4 @@ export function StoreInitializer() {
 
   return null;
 }
+

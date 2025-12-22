@@ -93,10 +93,10 @@ export const useFoldersStore = create<FoldersState>((set, get) => ({
       // Optimistic update
       set((state) => ({ folders: [...state.folders, tempFolder] }));
 
-      // ENHANCED: Add timeout protection with better error message
+      // PHASE 2B FIX: Increased timeout from 5s to 15s for better reliability on slow connections
       const savePromise = supabaseDatabaseService.addFolder(sanitizedData);
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Folder creation timeout - please check your connection and try again')), 5000)
+        setTimeout(() => reject(new Error('Folder creation timeout - please check your connection and try again')), 15000)
       );
 
       const newFolder = await Promise.race([savePromise, timeoutPromise]);
