@@ -57,17 +57,22 @@ export function createClient() {
           headers: {
             'X-Client-Info': 'linkvault-web-optimized',
           },
-          // Improved fetch with longer timeout for slow networks
+          // Improved fetch with proper headers and timeout
           fetch: (input: any, init: any = {}) => {
+            // Ensure Accept header is set for Supabase REST API
+            const headers = new Headers(init.headers || {});
+            if (!headers.has('Accept')) {
+              headers.set('Accept', 'application/json');
+            }
+            
             return fetch(input, {
               ...init,
-              // Increased from 5s to 15s for better reliability on slow networks
+              headers,
               signal: AbortSignal.timeout(AUTH_CONSTANTS.FETCH_TIMEOUT),
             }).catch((error) => {
-              // Log timeout errors for debugging
               if (error.name === 'AbortError' || error.name === 'TimeoutError') {
                 logger.warn('Supabase request timed out:', {
-                  url: input,
+                  url: typeof input === 'string' ? input : input.url,
                   timeout: AUTH_CONSTANTS.FETCH_TIMEOUT,
                 });
               }

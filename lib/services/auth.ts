@@ -701,13 +701,20 @@ export class AuthService {
    */
   private async getUserSettings(userId: string): Promise<UserSettings | null> {
     try {
+      // Use maybeSingle() to avoid 406 error when no rows exist
       const { data, error } = await this.supabase
         .from('user_settings')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
-      if (error || !data) {
+      if (error) {
+        logger.warn('Error fetching user settings:', error.message);
+        return null;
+      }
+
+      // Return null if no settings exist (user hasn't configured settings yet)
+      if (!data) {
         return null;
       }
 

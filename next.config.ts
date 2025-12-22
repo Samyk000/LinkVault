@@ -4,9 +4,10 @@ const nextConfig: NextConfig = {
   // Set explicit output file tracing root to silence workspace warning
   outputFileTracingRoot: __dirname,
 
-  // SECURITY: Add security headers
+  // SECURITY: Add security headers + PERFORMANCE: Add caching headers
   async headers() {
     return [
+      // Security headers for all routes
       {
         source: '/(.*)',
         headers: [
@@ -29,6 +30,26 @@ const nextConfig: NextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()',
+          },
+        ],
+      },
+      // PERFORMANCE: Cache immutable static assets (hashed filenames)
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // PERFORMANCE: Cache optimized images with stale-while-revalidate
+      {
+        source: '/_next/image',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate=604800',
           },
         ],
       },
@@ -156,17 +177,17 @@ const nextConfig: NextConfig = {
         hostname: 'localhost',
       },
     ],
-    // OPTIMIZED: Image optimization settings
+    // OPTIMIZED: Image optimization settings for Vercel
     formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 86400, // Increased from 60s to 24 hours
+    minimumCacheTTL: 86400, // 24 hours
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    qualities: [50, 60, 75, 80, 90, 100], // Valid quality values
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-    unoptimized: true, // CRITICAL: Required for Netlify image optimization
-    // OPTIMIZED: Add loader for external images
+    // Note: Individual <Image> components use unoptimized={!isAllowedImageDomain(url)}
+    // for external URLs not in remotePatterns to prevent runtime errors
     loader: 'default',
-    // OPTIMIZED: Limit concurrent image optimization requests
     domains: [], // Deprecated, use remotePatterns instead
   },
 
@@ -286,24 +307,18 @@ const nextConfig: NextConfig = {
     } : false,
   },
 
-  // Ensure API routes work properly on Netlify
+  // Experimental features
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',
     },
     // OPTIMIZED: Enable optimistic client cache
     optimisticClientCache: true,
-    // OPTIMIZED: Enable partial prerendering (Next.js 14+)
-    // ppr: true, // Uncomment when stable
   },
 
-  // OPTIMIZED: Remove standalone output for Netlify compatibility
-  // output: 'standalone', // Commented out - causes routing issues on Netlify
-
-  // CRITICAL: Add Netlify-specific configurations
-  trailingSlash: false, // Changed to false to fix sitemap.xml and robots.txt 404s
+  // URL configuration
+  trailingSlash: false,
 
 };
 
 export default nextConfig;
-

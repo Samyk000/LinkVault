@@ -700,45 +700,52 @@ export class SupabaseDatabaseService {
    * @returns {Promise<AppSettings | null>} User settings
    */
   async getSettings(): Promise<AppSettings | null> {
-    const { data: { user } } = await this.supabase.auth.getUser();
-    if (!user) {
-      throw new AuthenticationError('User not authenticated');
-    }
-
-    const cacheKey = this.getCacheKey(user.id, 'settings');
-
-    return this.dedupeRequest(cacheKey, async () => {
-      try {
-        // ENHANCED: Add timeout protection to prevent hanging queries
-        const queryPromise = this.supabase
-          .from('user_settings')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-
-        // Race against timeout
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Settings query timeout')), 5000)
-        );
-
-        const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
-
-        if (error) {
-          // If settings don't exist, return null (will be created)
-          if (error.code === 'PGRST116') return null;
-          throw error;
-        }
-
-        if (!data) return null;
-
-        return {
-          theme: data.theme as 'light' | 'dark' | 'system',
-        };
-      } catch (error) {
-        logger.error('Error fetching settings:', error);
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        // Return null instead of throwing - settings are optional
         return null;
       }
-    }, { ...CACHE_CONFIGS.USER_SETTINGS, tags: [...CACHE_CONFIGS.USER_SETTINGS.tags] });
+
+      const cacheKey = this.getCacheKey(user.id, 'settings');
+
+      return this.dedupeRequest(cacheKey, async () => {
+        try {
+          // Use maybeSingle() instead of single() to avoid 406 error when no rows exist
+          const queryPromise = this.supabase
+            .from('user_settings')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          // Race against timeout
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Settings query timeout')), 5000)
+          );
+
+          const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
+          if (error) {
+            // Log error without exposing sensitive details
+            logger.warn('Settings fetch error (non-critical)');
+            return null;
+          }
+
+          if (!data) return null;
+
+          return {
+            theme: data.theme as 'light' | 'dark' | 'system',
+          };
+        } catch (error) {
+          // Silent fail for settings - they're not critical
+          logger.warn('Settings unavailable, using defaults');
+          return null;
+        }
+      }, { ...CACHE_CONFIGS.USER_SETTINGS, tags: [...CACHE_CONFIGS.USER_SETTINGS.tags] });
+    } catch (error) {
+      // Settings are optional, return null on any error
+      return null;
+    }
   }
 
   /**
@@ -861,8 +868,17 @@ export class SupabaseDatabaseService {
     const retryDelay = 2000; // 2 seconds
     let unsubscribeRequested = false;
 
-    const createSubscription = () => {
+    const createSubscription = async () => {
       if (unsubscribeRequested) return;
+
+      // FIXED: Ensure user is authenticated before subscribing
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        logger.warn('[Realtime] Cannot subscribe to links: No authenticated user');
+        return;
+      }
+
+      logger.info(`[Realtime] Creating links subscription for user: ${user.id.substring(0, 8)}...`);
 
       const channel = this.supabase
         .channel(channelName, {
@@ -878,16 +894,15 @@ export class SupabaseDatabaseService {
             event: '*',
             schema: 'public',
             table: 'links',
+            filter: `user_id=eq.${user.id}`,
           },
           async (payload) => {
+            logger.debug(`[Realtime] Received ${payload.eventType} event on links table`);
             try {
               // Enhanced cache invalidation with race condition protection
-              const { data: { user } } = await this.supabase.auth.getUser();
-              if (user) {
-                // Only invalidate cache for actual data changes, not metadata changes
-                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
-                  this.invalidateCache(['links', `user:${user.id}`]);
-                }
+              // Only invalidate cache for actual data changes, not metadata changes
+              if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
+                this.invalidateCache(['links', `user:${user.id}`]);
               }
 
               // Refetch all links when any change occurs with deduplication
@@ -899,7 +914,7 @@ export class SupabaseDatabaseService {
               }, 50);
 
             } catch (error) {
-              logger.error('Error handling realtime link changes:', {
+              logger.error('[Realtime] Error handling link changes:', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 eventType: payload.eventType,
                 table: payload.table,
@@ -914,8 +929,9 @@ export class SupabaseDatabaseService {
           }
         )
         .on('system', {}, (payload) => {
+          logger.debug(`[Realtime] System event:`, payload);
           if (payload.status === 'CHANNEL_ERROR') {
-            logger.error('Realtime channel error for links:', payload);
+            logger.error('[Realtime] Channel error for links:', payload);
             performanceMonitor.trackError({
               message: 'Realtime channel error',
               severity: 'high',
@@ -923,18 +939,20 @@ export class SupabaseDatabaseService {
             });
           }
         })
-        .subscribe((status) => {
+        .subscribe((status, err) => {
+          logger.info(`[Realtime] Links subscription status: ${status}${err ? ` (error: ${err.message})` : ''}`);
+          
           if (status === 'SUBSCRIBED') {
-            logger.debug('Successfully subscribed to links changes');
+            logger.info('[Realtime] Successfully subscribed to links changes');
             retryCount = 0; // Reset retry count on successful connection
           } else if (status === 'CHANNEL_ERROR') {
-            logger.error('Failed to subscribe to links changes');
+            logger.error('[Realtime] Failed to subscribe to links changes', err);
 
             // Retry connection with exponential backoff
             if (retryCount < maxRetries && !unsubscribeRequested) {
               retryCount++;
               const delay = retryDelay * Math.pow(2, retryCount - 1);
-              logger.debug(`Retrying links subscription in ${delay}ms (attempt ${retryCount}/${maxRetries})`);
+              logger.info(`[Realtime] Retrying links subscription in ${delay}ms (attempt ${retryCount}/${maxRetries})`);
 
               setTimeout(() => {
                 if (this.activeChannels.has(channelName) && !unsubscribeRequested) {
@@ -944,14 +962,14 @@ export class SupabaseDatabaseService {
                       this.supabase.removeChannel(ch);
                     }
                   } catch (error) {
-                    logger.warn('Error removing channel during retry:', error);
+                    logger.warn('[Realtime] Error removing channel during retry:', error);
                   }
                   this.activeChannels.delete(channelName);
                   createSubscription();
                 }
               }, delay);
             } else {
-              logger.error('Max retries reached for links subscription');
+              logger.error('[Realtime] Max retries reached for links subscription');
               performanceMonitor.trackError({
                 message: 'Links subscription failed after max retries',
                 severity: 'high',
@@ -959,7 +977,9 @@ export class SupabaseDatabaseService {
               });
             }
           } else if (status === 'CLOSED') {
-            logger.debug('Links subscription closed');
+            logger.info('[Realtime] Links subscription closed');
+          } else if (status === 'TIMED_OUT') {
+            logger.warn('[Realtime] Links subscription timed out');
           }
         });
 
@@ -970,6 +990,7 @@ export class SupabaseDatabaseService {
 
     return () => {
       unsubscribeRequested = true;
+      logger.info('[Realtime] Unsubscribing from links changes');
       // Safely unsubscribe
       if (this.activeChannels.has(channelName)) {
         const ch = this.activeChannels.get(channelName);
@@ -978,7 +999,7 @@ export class SupabaseDatabaseService {
             this.supabase.removeChannel(ch);
           }
         } catch (error) {
-          logger.warn('Error removing channel during unsubscribe:', error);
+          logger.warn('[Realtime] Error removing channel during unsubscribe:', error);
         }
         this.activeChannels.delete(channelName);
       }

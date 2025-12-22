@@ -28,24 +28,25 @@ export const settingsService = {
       throw new Error('No authenticated user found');
     }
 
+    // Use maybeSingle() to avoid 406 error when no rows exist
     const { data, error } = await supabase
       .from('user_settings')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        // No rows returned - settings not found, return default
-        return null;
-      }
-
       logger.error('Failed to fetch user settings:', {
         error: error.message,
         userId,
         timestamp: new Date().toISOString()
       });
       throw new Error(`Failed to fetch settings: ${error.message}`);
+    }
+
+    // Return null if no settings exist (user hasn't configured settings yet)
+    if (!data) {
+      return null;
     }
 
     return data as AppSettings;
@@ -169,24 +170,25 @@ export const settingsService = {
    * @throws {Error} When fetching settings fails
    */
   async getSettingsForUser(userId: string): Promise<AppSettings | null> {
+    // Use maybeSingle() to avoid 406 error when no rows exist
     const { data, error } = await supabase
       .from('user_settings')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        // No rows returned - settings not found
-        return null;
-      }
-
       logger.error('Failed to fetch settings for user:', {
         error: error.message,
         targetUserId: userId,
         timestamp: new Date().toISOString()
       });
       throw new Error(`Failed to fetch settings for user: ${error.message}`);
+    }
+
+    // Return null if no settings exist
+    if (!data) {
+      return null;
     }
 
     return data as AppSettings;

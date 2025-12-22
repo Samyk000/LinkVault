@@ -74,9 +74,10 @@ export default async function RootLayout({
 
   let authUser = null;
   if (user) {
+    // Use maybeSingle() to avoid 406 error when no rows exist
     const [profileResult, settingsResult] = await Promise.all([
-      supabase.from('user_profiles').select('*').eq('id', user.id).single(),
-      supabase.from('user_settings').select('*').eq('user_id', user.id).single()
+      supabase.from('user_profiles').select('*').eq('id', user.id).maybeSingle(),
+      supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle()
     ]);
 
     authUser = {

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ExternalLink, Briefcase, Folder as FolderIcon, Heart, Star, Bookmark, Box, Settings, Home, Globe, FileText, Calendar, Clock, Code, Database, Terminal, Cpu, Lightbulb, Image as ImageIcon, Video, Music, ShoppingCart, Map, Users, User, Shield, AlertTriangle, Info, Mail, Lock, Key, Mic, Headphones, Gamepad, Play, Tag } from 'lucide-react';
 import Image from 'next/image';
+import { isAllowedImageDomain } from '@/utils/image.utils';
 
 interface SharedLink {
   id: string;
@@ -243,6 +244,7 @@ export default function SharedFolderPage({
                       alt=""
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-200"
+                      unoptimized={!isAllowedImageDomain(link.thumbnail)}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
@@ -272,6 +274,7 @@ export default function SharedFolderPage({
                           width={10}
                           height={10}
                           className="rounded-sm"
+                          unoptimized={!isAllowedImageDomain(link.favicon_url)}
                         />
                       )}
                       <span className="truncate max-w-[100px] font-mono">

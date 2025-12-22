@@ -24,32 +24,47 @@ export const IMAGE_CONSTANTS = {
 
     /**
      * Allowed image domains for Next.js Image optimization
-     * These domains are configured in next.config.ts
+     * These domains are configured in next.config.ts remotePatterns
+     * Keep this list in sync with remotePatterns for isAllowedImageDomain() checks
      */
     ALLOWED_DOMAINS: [
+        // YouTube
         'img.youtube.com',
         'i.ytimg.com',
+        // Twitter/X
         'pbs.twimg.com',
+        // Instagram
         'scontent.cdninstagram.com',
         'instagram.com',
+        // LinkedIn
         'media.licdn.com',
+        // GitHub
         'avatars.githubusercontent.com',
         'github.com',
+        'favicons.githubusercontent.com',
+        // Medium
         'miro.medium.com',
         'cdn-images-1.medium.com',
+        // Reddit
         'external-preview.redd.it',
         'preview.redd.it',
+        // Facebook
         'scontent.xx.fbcdn.net',
+        // TikTok
         'p16-sign-sg.tiktokcdn.com',
+        // Common CDNs
         'images.unsplash.com',
         'via.placeholder.com',
+        // Favicon services
         'c1.tablecdn.com',
         'www.google.com',
         'www.google.com.sg',
-        'favicons.githubusercontent.com',
         'logo.clearbit.com',
         'icons.duckduckgo.com',
         'www.favicon.cc',
+        // Other
+        'buffer.com',
+        'localhost',
     ] as const,
 } as const;
 

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '@/lib/utils/logger';
 
 export const runtime = 'nodejs';
 
@@ -65,11 +66,10 @@ export async function POST(
       }
 
       // Create share record
-      console.log('Creating share record with data:', {
+      logger.info('Creating share record:', {
         folder_id: folderId,
         share_id: shareId,
-        user_id: user.id,
-        created_by: user.id
+        user_id: user.id
       });
       
       const { data, error: shareError } = await supabase
@@ -83,15 +83,22 @@ export async function POST(
         .select()
         .single();
 
-      console.log('Share record creation result:', { data, shareError });
-
       if (shareError) {
-        console.error('Share record creation failed:', shareError);
+        logger.error('Share record creation failed:', {
+          error: shareError.message,
+          code: shareError.code,
+          details: shareError.details,
+          hint: shareError.hint,
+          folderId,
+          userId: user.id
+        });
         return NextResponse.json(
           { error: 'Failed to create share record', details: shareError.message },
           { status: 500 }
         );
       }
+      
+      logger.info('Share record created successfully:', { shareId: data?.id });
     }
 
     const baseUrl = request.nextUrl.origin;
@@ -105,7 +112,10 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Share folder error:', error);
+    logger.error('Share folder error:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -185,7 +195,10 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Disable sharing error:', error);
+    logger.error('Disable sharing error:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
