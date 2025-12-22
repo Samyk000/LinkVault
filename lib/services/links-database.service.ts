@@ -178,12 +178,16 @@ export class LinksDatabaseService {
 
   /**
    * Add a new link
+   * FIX 2: Accepts userId as parameter - no getUser() call
+   * Auth validation is done at the UI/store layer before calling this
    * @param link - Link data
+   * @param userId - Authenticated user ID (required)
    */
-  async addLink(link: Omit<Link, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>): Promise<Link> {
+  async addLink(link: Omit<Link, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>, userId: string): Promise<Link> {
     try {
-      const { data: { user } } = await this.supabase.auth.getUser();
-      if (!user) {
+      // FIX 2: No getUser() call - userId is passed from caller
+      // This eliminates the redundant network call that could timeout
+      if (!userId) {
         throw new AuthenticationError('User not authenticated');
       }
 
@@ -191,7 +195,7 @@ export class LinksDatabaseService {
       // Cache invalidation moved to after success
 
       const linkData = {
-        user_id: user.id,
+        user_id: userId,
         url: link.url,
         title: link.title,
         description: link.description || null,
@@ -226,7 +230,7 @@ export class LinksDatabaseService {
       }
 
       // Invalidate cache after successful creation
-      this.invalidateUserCache(user.id);
+      this.invalidateUserCache(userId);
 
       return createdLink;
     } catch (error) {

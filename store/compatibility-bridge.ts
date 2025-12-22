@@ -63,7 +63,7 @@ interface CombinedStore {
   folderToShare: { id: string; name: string; linkCount: number } | null;
   
   // Actions - Links
-  addLink: (link: Omit<Link, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>) => Promise<void>;
+  addLink: (link: Omit<Link, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>, userId?: string) => Promise<void>;
   updateLink: (id: string, updates: Partial<Link>) => Promise<void>;
   deleteLink: (id: string) => Promise<void>;
   restoreLink: (id: string) => Promise<void>;

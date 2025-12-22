@@ -351,7 +351,7 @@ export function AddLinkModal() {
           icon: <Link2 className="size-4" />,
         });
       } else {
-        // Add new link
+        // Add new link - pass userId to avoid getUser() call in store/service
         await addLink({
           url: data.url,
           title: data.title,
@@ -360,7 +360,7 @@ export function AddLinkModal() {
           platform,
           folderId: data.folderId || null,
           isFavorite: false,
-        });
+        }, user?.id);
 
         clearTimeout(safetyTimeout);
         toast({

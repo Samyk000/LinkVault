@@ -12,7 +12,6 @@ import { guestStorageService } from '@/lib/services/guest-storage.service';
 import { sanitizeLinkData } from '@/lib/utils/sanitization';
 import { logger } from '@/lib/utils/logger';
 import { detectMobileBrowser } from '@/lib/utils/platform';
-import { createClient } from '@/lib/supabase/client';
 
 /**
  * Helper to check if guest mode is active
@@ -32,7 +31,7 @@ interface LinksState {
   setLoading: (isLoading: boolean) => void;
 
   // Actions - Single Link Operations
-  addLink: (linkData: Omit<Link, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>) => Promise<void>;
+  addLink: (linkData: Omit<Link, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>, userId?: string) => Promise<void>;
   updateLink: (id: string, updates: Partial<Link>) => Promise<void>;
   deleteLink: (id: string) => Promise<void>;
   restoreLink: (id: string) => Promise<void>;
@@ -74,13 +73,14 @@ export const useLinksStore = create<LinksState>((set, get) => ({
 
   /**
    * Adds a new link with deterministic session validation
-   * HARDENED: No retry loops for auth - session must be ready before this is called
-   * Retries are ONLY for network/server failures, not auth bootstrapping
+   * HARDENED: No getUser() call - relies on userId passed from UI layer
+   * The UI layer (modal) must ensure isSessionReady=true and pass userId before allowing submission
    * @param {Omit<Link, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>} linkData - Link data to create
+   * @param {string} userId - Authenticated user ID from auth context (required for non-guest mode)
    * @returns {Promise<void>}
    * @throws {Error} When link creation fails
    */
-  addLink: async (linkData) => {
+  addLink: async (linkData, userId) => {
     const browserInfo = detectMobileBrowser();
 
     try {
@@ -95,19 +95,10 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         return;
       }
 
-      // HARDENED: Single session check - no retries for auth
-      // The UI layer (modal) must ensure isSessionReady=true before allowing submission
-      // If session is not ready here, it's a bug in the UI layer, not something to retry
-      const { data: { user }, error: authError } = await createClient().auth.getUser();
-      
-      if (authError) {
-        logger.error('Auth error during addLink:', authError);
-        throw new Error('Authentication error. Please refresh the page and try again.');
-      }
-      
-      if (!user) {
-        // This should never happen if UI properly checks isSessionReady
-        logger.error('addLink called without authenticated user - UI bug');
+      // FIX 1: No getUser() call - rely on userId from auth context
+      // If userId is missing, it's a UI bug - fail fast without network call
+      if (!userId) {
+        logger.error('addLink called without userId - UI bug: session not ready');
         throw new Error('Not authenticated. Please sign in and try again.');
       }
 
@@ -145,7 +136,8 @@ export const useLinksStore = create<LinksState>((set, get) => ({
 
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
-          const savePromise = linksDatabaseService.addLink(sanitizedData);
+          // FIX 2: Pass userId to service layer - no getUser() in service either
+          const savePromise = linksDatabaseService.addLink(sanitizedData, userId);
           const timeoutPromise = new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('Add link timeout - please check your connection')), timeoutDuration)
           );
@@ -174,7 +166,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
         } catch (error) {
           lastError = error instanceof Error ? error : new Error('Unknown error');
 
-          // Don't retry on certain errors that won't improve
+          // Don't retry on auth errors - they won't improve
           if (error instanceof Error && (
             error.message?.includes('authentication') ||
             error.message?.includes('not authenticated'))) {
@@ -195,7 +187,6 @@ export const useLinksStore = create<LinksState>((set, get) => ({
 
     } catch (error) {
       // FIXED: Only remove the specific temp link that failed, not all temp links
-      const tempIdToRemove = `temp-`;
       set((state) => ({
         links: state.links.filter((link) => {
           // Keep non-temp links

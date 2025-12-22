@@ -1008,6 +1008,7 @@ export class SupabaseDatabaseService {
 
   /**
    * Subscribe to folder changes with improved error handling
+   * FIX 3: Added auth check before creating subscription (matches subscribeToLinks pattern)
    * @param {Function} callback - Callback function
    * @returns {Function} Unsubscribe function
    */
@@ -1032,8 +1033,17 @@ export class SupabaseDatabaseService {
     const retryDelay = 2000; // 2 seconds
     let unsubscribeRequested = false;
 
-    const createSubscription = () => {
+    const createSubscription = async () => {
       if (unsubscribeRequested) return;
+
+      // FIX 3: Ensure user is authenticated before subscribing (matches subscribeToLinks pattern)
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        logger.warn('[Realtime] Cannot subscribe to folders: No authenticated user');
+        return;
+      }
+
+      logger.info(`[Realtime] Creating folders subscription for user: ${user.id.substring(0, 8)}...`);
 
       const channel = this.supabase
         .channel(channelName, {
@@ -1049,14 +1059,12 @@ export class SupabaseDatabaseService {
             event: '*',
             schema: 'public',
             table: 'folders',
+            filter: `user_id=eq.${user.id}`,
           },
           async (payload) => {
             try {
               // Clear cache to force fresh fetch
-              const { data: { user } } = await this.supabase.auth.getUser();
-              if (user) {
-                this.invalidateCache(['folders', `user:${user.id}`]);
-              }
+              this.invalidateCache(['folders', `user:${user.id}`]);
               // Refetch all folders when any change occurs
               const folders = await this.getFolders();
               callback(folders);
@@ -1082,7 +1090,7 @@ export class SupabaseDatabaseService {
         })
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            logger.debug('Successfully subscribed to folders changes');
+            logger.info('[Realtime] Successfully subscribed to folders changes');
             retryCount = 0; // Reset retry count on successful connection
           } else if (status === 'CHANNEL_ERROR') {
             logger.error('Failed to subscribe to folders changes');

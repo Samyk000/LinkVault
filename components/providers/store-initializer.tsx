@@ -347,14 +347,17 @@ export function StoreInitializer() {
       }
     }
 
-    // Set up real-time subscriptions (only for authenticated users with ready session)
+    // FIX 3: Set up real-time subscriptions (only for authenticated users with ready session)
+    // REMOVED: Fixed 1s delay - now session-aware, subscriptions only created when auth is ready
     let unsubscribeLinks: (() => void) | null = null;
     let unsubscribeFolders: (() => void) | null = null;
 
-    const setupSubscriptions = () => {
-      if (!currentUserId || !isSessionReady) return;
-
+    // FIX 3: Session-aware subscription setup - no arbitrary delay
+    // Only setup subscriptions when we have both userId AND isSessionReady
+    if (currentUserId && isSessionReady) {
       try {
+        logger.debug('[Realtime] Setting up subscriptions for authenticated user');
+        
         unsubscribeLinks = supabaseDatabaseService.subscribeToLinks((updatedLinks) => {
           if (lastLoadedUserId.current === currentUserId) {
             setLinks(updatedLinks);
@@ -366,18 +369,23 @@ export function StoreInitializer() {
             setFolders(updatedFolders);
           }
         });
+        
+        logger.debug('[Realtime] Subscriptions setup complete');
       } catch (error) {
         logger.warn('Real-time subscriptions failed:', error);
       }
-    };
-
-    // Delay subscriptions slightly to prioritize initial load
-    const subscriptionTimeout = setTimeout(setupSubscriptions, 1000);
+    }
 
     return () => {
-      clearTimeout(subscriptionTimeout);
-      if (unsubscribeLinks) unsubscribeLinks();
-      if (unsubscribeFolders) unsubscribeFolders();
+      // Cleanup subscriptions on unmount or user change
+      if (unsubscribeLinks) {
+        logger.debug('[Realtime] Cleaning up links subscription');
+        unsubscribeLinks();
+      }
+      if (unsubscribeFolders) {
+        logger.debug('[Realtime] Cleaning up folders subscription');
+        unsubscribeFolders();
+      }
     };
   }, [user, authLoading, isGuestMode, guestLoading, isSessionReady, setLinks, setFolders, setSettings, setHydrated, setIsLoadingData, loadUserData, loadGuestData]);
 
