@@ -1,7 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createRateLimiter, createRateLimitResponse } from '@/lib/middleware/rate-limit';
+
+// SECURITY: Rate limiting to prevent abuse (5 share creations per minute)
+const shareRateLimiter = createRateLimiter({
+  interval: 60 * 1000, // 1 minute
+  maxRequests: 5,      // 5 requests per minute per IP
+});
 
 export async function POST(request: NextRequest) {
+  // SECURITY: Apply rate limiting before any processing
+  const rateLimit = shareRateLimiter.check(request);
+  
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(
+      rateLimit.allowed,
+      rateLimit.remaining,
+      rateLimit.resetTime
+    );
+  }
+
   try {
     const supabase = await createClient();
 

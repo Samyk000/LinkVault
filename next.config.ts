@@ -95,6 +95,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'github.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'opengraph.githubassets.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'repository-images.githubusercontent.com',
+      },
       // Medium images
       {
         protocol: 'https',
@@ -166,6 +174,24 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'buffer.com',
+      },
+      // Additional OG image sources
+      {
+        protocol: 'https',
+        hostname: 'luvvoice.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'filemock.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'dos.zone',
+      },
+      // Vercel domains
+      {
+        protocol: 'https',
+        hostname: '*.vercel.app',
       },
       // Allow localhost for development
       {

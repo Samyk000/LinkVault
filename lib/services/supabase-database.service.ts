@@ -878,7 +878,10 @@ export class SupabaseDatabaseService {
         return;
       }
 
-      logger.info(`[Realtime] Creating links subscription for user: ${user.id.substring(0, 8)}...`);
+      // STALE CLOSURE FIX: Capture userId at subscription creation time
+      const capturedUserId = user.id;
+
+      logger.info(`[Realtime] Creating links subscription for user: ${capturedUserId.substring(0, 8)}...`);
 
       const channel = this.supabase
         .channel(channelName, {
@@ -894,15 +897,26 @@ export class SupabaseDatabaseService {
             event: '*',
             schema: 'public',
             table: 'links',
-            filter: `user_id=eq.${user.id}`,
+            filter: `user_id=eq.${capturedUserId}`,
           },
           async (payload) => {
             logger.debug(`[Realtime] Received ${payload.eventType} event on links table`);
             try {
+              // STALE CLOSURE FIX: Verify current user still matches captured user
+              // This prevents cross-user data pollution when switching accounts
+              const { data: { user: currentUser } } = await this.supabase.auth.getUser();
+              if (currentUser?.id !== capturedUserId) {
+                logger.warn('[Realtime] User changed, ignoring stale event', {
+                  capturedUserId: capturedUserId.substring(0, 8),
+                  currentUserId: currentUser?.id?.substring(0, 8) || 'none'
+                });
+                return;
+              }
+
               // Enhanced cache invalidation with race condition protection
               // Only invalidate cache for actual data changes, not metadata changes
               if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
-                this.invalidateCache(['links', `user:${user.id}`]);
+                this.invalidateCache(['links', `user:${capturedUserId}`]);
               }
 
               // Refetch all links when any change occurs with deduplication
@@ -1043,7 +1057,10 @@ export class SupabaseDatabaseService {
         return;
       }
 
-      logger.info(`[Realtime] Creating folders subscription for user: ${user.id.substring(0, 8)}...`);
+      // STALE CLOSURE FIX: Capture userId at subscription creation time
+      const capturedUserId = user.id;
+
+      logger.info(`[Realtime] Creating folders subscription for user: ${capturedUserId.substring(0, 8)}...`);
 
       const channel = this.supabase
         .channel(channelName, {
@@ -1059,12 +1076,23 @@ export class SupabaseDatabaseService {
             event: '*',
             schema: 'public',
             table: 'folders',
-            filter: `user_id=eq.${user.id}`,
+            filter: `user_id=eq.${capturedUserId}`,
           },
           async (payload) => {
             try {
+              // STALE CLOSURE FIX: Verify current user still matches captured user
+              // This prevents cross-user data pollution when switching accounts
+              const { data: { user: currentUser } } = await this.supabase.auth.getUser();
+              if (currentUser?.id !== capturedUserId) {
+                logger.warn('[Realtime] User changed, ignoring stale folder event', {
+                  capturedUserId: capturedUserId.substring(0, 8),
+                  currentUserId: currentUser?.id?.substring(0, 8) || 'none'
+                });
+                return;
+              }
+
               // Clear cache to force fresh fetch
-              this.invalidateCache(['folders', `user:${user.id}`]);
+              this.invalidateCache(['folders', `user:${capturedUserId}`]);
               // Refetch all folders when any change occurs
               const folders = await this.getFolders();
               callback(folders);

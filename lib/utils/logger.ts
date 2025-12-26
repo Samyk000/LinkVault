@@ -2,6 +2,7 @@
  * @file lib/utils/logger.ts
  * @description Production-safe logging utility
  * @created 2025-01-01
+ * @updated 2025-12-26 - Fixed production warning logging
  */
 
 /**
@@ -27,14 +28,17 @@ export const logger = {
   },
 
   /**
-   * Log warnings (always logged, but throttled in production)
+   * Log warnings (always logged in production for visibility)
+   * FIXED: Warnings were being silently dropped in production
    */
   warn: (...args: unknown[]): void => {
     if (process.env.NODE_ENV === 'development') {
       console.warn(...args);
     } else {
-      // In production, only log critical warnings
-      // Could send to error tracking service here
+      // FIXED: Log warnings in production with timestamp for debugging
+      console.warn('[WARN]', new Date().toISOString(), ...args);
+      // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
+      // errorTrackingService.captureMessage(args[0]?.toString(), 'warning');
     }
   },
 
@@ -47,7 +51,7 @@ export const logger = {
       console.error(...args);
     } else {
       // In production, send to error tracking service
-      console.error(...args);
+      console.error('[ERROR]', new Date().toISOString(), ...args);
       // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
       // errorTrackingService.captureException(args[0]);
     }

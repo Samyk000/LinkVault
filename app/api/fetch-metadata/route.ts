@@ -48,34 +48,39 @@ const RequestSchema = z.object({
       }
     }, 'URL must use http or https protocol')
     .refine((url) => {
-      // Prevent localhost/private IP access in production
-      if (process.env.NODE_ENV === 'production') {
-        try {
-          const parsedUrl = new URL(url);
-          const hostname = parsedUrl.hostname.toLowerCase();
-          
-          // Block localhost, private IPs, and internal domains
-          const blockedPatterns = [
-            /^localhost$/i,
-            /^127\./,
-            /^10\./,
-            /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
-            /^192\.168\./,
-            /^169\.254\./,
-            /^::1$/,
-            /^fc00:/,
-            /^fe80:/,
-            /\.local$/i,
-            /\.internal$/i,
-          ];
-          
-          return !blockedPatterns.some(pattern => pattern.test(hostname));
-        } catch {
-          return false;
-        }
+      // SECURITY: Always prevent localhost/private IP access (not just production)
+      // This prevents SSRF attacks including DNS rebinding
+      try {
+        const parsedUrl = new URL(url);
+        const hostname = parsedUrl.hostname.toLowerCase();
+        
+        // Block localhost, private IPs, internal domains, and dangerous patterns
+        const blockedPatterns = [
+          /^localhost$/i,
+          /^127\./,                              // IPv4 loopback
+          /^10\./,                               // Private Class A
+          /^172\.(1[6-9]|2[0-9]|3[0-1])\./,     // Private Class B
+          /^192\.168\./,                         // Private Class C
+          /^169\.254\./,                         // Link-local
+          /^0\.0\.0\.0$/,                        // All interfaces
+          /^::1$/,                               // IPv6 loopback
+          /^::ffff:/i,                           // IPv6 mapped IPv4 addresses
+          /^\[::1\]$/,                           // IPv6 loopback in brackets
+          /^\[::ffff:/i,                         // IPv6 mapped in brackets
+          /^fc00:/i,                             // IPv6 unique local
+          /^fe80:/i,                             // IPv6 link-local
+          /^fd[0-9a-f]{2}:/i,                    // IPv6 unique local (fd00::/8)
+          /\.local$/i,                           // mDNS local domain
+          /\.localhost$/i,                       // .localhost TLD
+          /\.internal$/i,                        // Internal domain
+          /^0\./,                                // 0.0.0.0/8 network
+        ];
+        
+        return !blockedPatterns.some(pattern => pattern.test(hostname));
+      } catch {
+        return false;
       }
-      return true;
-    }, 'URL not allowed in production environment'),
+    }, 'URL not allowed - private/internal addresses are blocked'),
 });
 
 // Response schema for type safety
@@ -332,6 +337,19 @@ export async function POST(req: Request) {
           validateStatus: (status) => status < 500, // Don't throw on 4xx errors
           signal: AbortSignal.timeout(5000),
         });
+
+        // SECURITY: Validate Content-Type to prevent fetching binary files
+        const contentType = response.headers['content-type'] || '';
+        if (!contentType.includes('text/html') && 
+            !contentType.includes('application/xhtml+xml') &&
+            !contentType.includes('text/plain')) {
+          console.log(`Non-HTML content type for ${url}: ${contentType}`);
+          return NextResponse.json({
+            error: 'URL does not return HTML content',
+            contentType: contentType,
+            processingTime: Date.now() - startTime,
+          }, { status: 400 });
+        }
 
         console.log(`Successfully fetched ${url} with status ${response.status}`);
         // If we got a response (even if error status), break retry loop

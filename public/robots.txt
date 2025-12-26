@@ -1,0 +1,14 @@
+# LinksVault robots.txt
+# https://www.linksvault.online
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /app/
+Disallow: /login
+Disallow: /signup
+Disallow: /shared/
+Disallow: /share/
+
+# Sitemap
+Sitemap: https://www.linksvault.online/sitemap.xml

@@ -190,6 +190,10 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
     try {
       setLoading(true);
       clearError();
+      
+      // CRITICAL: Set isSessionReady to false BEFORE clearing user
+      // This prevents race conditions during sign-out/sign-in transitions
+      setIsSessionReady(false);
 
       // Mark user as logged out BEFORE actual signout
       markUserLoggedOut();
@@ -198,16 +202,23 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
       const { error } = await authService.signOut();
 
       if (error) {
+        // On error, restore session ready state
+        setIsSessionReady(true);
         setError(error);
         return { error };
       }
 
       setUser(null);
+      // CRITICAL: Mark session as ready AFTER user is cleared
+      // Now definitively logged out
+      setIsSessionReady(true);
       return { error: null };
     } catch (error) {
       const authError = {
         message: error instanceof Error ? error.message : 'An unexpected error occurred',
       };
+      // On error, restore session ready state
+      setIsSessionReady(true);
       setError(authError);
       return { error: authError };
     } finally {
@@ -389,14 +400,38 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
           // This is NOT a timing hack - it's a second verification attempt
           logger.debug('Auth: INITIAL_SESSION null, no confirmation - doing verification check');
           
+          // CRITICAL: Add timeout to prevent infinite hydration wait
+          const MAX_HYDRATION_WAIT = 5000; // 5 seconds max wait
+          
           // Second verification after IndexedDB should be ready
           const verifyAuth = async () => {
             if (!mounted || hasReceivedAuthEvent.current) return;
             
+            // Create timeout promise
+            const timeoutPromise = new Promise<{ timedOut: true }>((resolve) =>
+              setTimeout(() => resolve({ timedOut: true }), MAX_HYDRATION_WAIT)
+            );
+            
             try {
-              const { data: { user: verifiedUser } } = await authService.getSupabaseClient().auth.getUser();
+              const authPromise = authService.getSupabaseClient().auth.getUser();
+              
+              // Race between auth check and timeout
+              const result = await Promise.race([
+                authPromise.then((res: { data: { user: any }; error: any }) => ({ ...res, timedOut: false as const })),
+                timeoutPromise
+              ]);
               
               if (!mounted) return;
+              
+              // Handle timeout case
+              if ('timedOut' in result && result.timedOut) {
+                logger.warn('Auth: Hydration timeout reached - finalizing as unauthenticated');
+                hasReceivedAuthEvent.current = true;
+                setIsSessionReady(true);
+                return;
+              }
+              
+              const { data: { user: verifiedUser } } = result as { data: { user: any } };
               
               if (verifiedUser) {
                 // User found on second check - IndexedDB was slow

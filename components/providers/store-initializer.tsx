@@ -5,6 +5,7 @@
  * @description Initializes store from Supabase and sets up real-time sync
  * @created 2025-10-18
  * @updated 2025-12-17 - Added visibility change listener for extension sync
+ * @updated 2025-12-26 - Added loading state safety timeout
  */
 
 import { useEffect, useRef, useCallback } from 'react';
@@ -18,6 +19,9 @@ import { supabaseDatabaseService } from '@/lib/services/supabase-database.servic
 import { guestStorageService } from '@/lib/services/guest-storage.service';
 import { logger } from '@/lib/utils/logger';
 import { DEFAULT_SETTINGS } from '@/constants';
+
+// SAFETY: Maximum time to wait for loading to complete (30 seconds)
+const LOADING_SAFETY_TIMEOUT = 30000;
 
 export function StoreInitializer() {
   const { setLinks } = useLinksStore();
@@ -35,6 +39,19 @@ export function StoreInitializer() {
   const hasLoadedData = useRef(false); // Track if we've successfully loaded data
   const lastVisibilityRefresh = useRef<number>(0); // Track last refresh time
   const lastSessionReadyState = useRef<boolean>(false); // Track session ready state changes
+
+  // SAFETY: Add timeout to ensure loading state always resolves
+  useEffect(() => {
+    const safetyTimeout = setTimeout(() => {
+      if (loadingInProgress.current) {
+        logger.warn('[StoreInitializer] Loading safety timeout triggered - forcing loading state to false');
+        loadingInProgress.current = false;
+        setIsLoadingData(false);
+      }
+    }, LOADING_SAFETY_TIMEOUT);
+
+    return () => clearTimeout(safetyTimeout);
+  }, [setIsLoadingData]);
 
   // Memoized data loading function with retry
   // FIXED: Removed links.length and folders.length from dependencies to prevent circular updates

@@ -69,26 +69,32 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // PERFORMANCE: Only fetch basic user info on server
+  // Profile and settings are loaded client-side to reduce TTFB
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  let authUser = null;
-  if (user) {
-    // Use maybeSingle() to avoid 406 error when no rows exist
-    const [profileResult, settingsResult] = await Promise.all([
-      supabase.from('user_profiles').select('*').eq('id', user.id).maybeSingle(),
-      supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle()
-    ]);
-
-    authUser = {
-      ...user,
-      profile: profileResult.data || undefined,
-      settings: settingsResult.data || undefined
-    };
-  }
+  // OPTIMIZED: Pass minimal user data to client
+  // Full profile/settings loaded by StoreInitializer client-side
+  const authUser = user ? {
+    id: user.id,
+    email: user.email,
+    app_metadata: user.app_metadata,
+    user_metadata: user.user_metadata,
+    aud: user.aud,
+    created_at: user.created_at,
+  } : null;
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* PERFORMANCE: Preconnect to critical third-party origins */}
+        <link rel="preconnect" href="https://fwqzmuogcziicixologi.supabase.co" />
+        <link rel="dns-prefetch" href="https://fwqzmuogcziicixologi.supabase.co" />
+        {/* Preconnect to common image CDNs */}
+        <link rel="preconnect" href="https://opengraph.githubassets.com" />
+        <link rel="dns-prefetch" href="https://opengraph.githubassets.com" />
+      </head>
       <body className={`${inter.className} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
         <LayoutClient initialUser={authUser}>
           {children}

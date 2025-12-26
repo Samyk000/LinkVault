@@ -73,7 +73,7 @@ export const useFoldersStore = create<FoldersState>((set, get) => ({
 
     try {
       // CRITICAL: Sanitize input data to prevent XSS
-      const sanitizedData = sanitizeFolderData(folderData);
+      const sanitizedData = sanitizeFolderData(folderData) as typeof folderData;
 
       // GUEST MODE: Use local storage instead of database
       if (isGuestMode()) {
@@ -84,7 +84,8 @@ export const useFoldersStore = create<FoldersState>((set, get) => ({
       }
 
       const tempFolder: Folder = {
-        ...sanitizedData,
+        ...folderData, // Use original folderData which has all required fields
+        ...sanitizedData, // Override with sanitized values
         id: tempId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -94,7 +95,7 @@ export const useFoldersStore = create<FoldersState>((set, get) => ({
       set((state) => ({ folders: [...state.folders, tempFolder] }));
 
       // PHASE 2B FIX: Increased timeout from 5s to 15s for better reliability on slow connections
-      const savePromise = supabaseDatabaseService.addFolder(sanitizedData);
+      const savePromise = supabaseDatabaseService.addFolder(sanitizedData as typeof folderData);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Folder creation timeout - please check your connection and try again')), 15000)
       );

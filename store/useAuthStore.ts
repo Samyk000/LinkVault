@@ -3,6 +3,19 @@
  * @description Authentication state management
  * @created 2025-11-12
  * @modified 2025-11-12
+ * 
+ * @deprecated This store is DEPRECATED. Use `useAuth()` from `@/lib/contexts/auth-context` instead.
+ * This store exists only for backwards compatibility with the compatibility-bridge.
+ * New code should NOT use this store directly.
+ * 
+ * Migration guide:
+ * - Replace: import { useAuthStore } from '@/store/useAuthStore'
+ * - With: import { useAuth } from '@/lib/contexts/auth-context'
+ * 
+ * The useAuth() hook provides:
+ * - Proper session hydration state (isSessionReady)
+ * - Chromium mobile IndexedDB fix
+ * - Consistent auth state across the app
  */
 
 import { create } from 'zustand';
@@ -11,6 +24,18 @@ import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/utils/logger';
 
 const supabase = createClient();
+
+// Log deprecation warning once
+let hasWarnedDeprecation = false;
+function warnDeprecation() {
+  if (!hasWarnedDeprecation) {
+    logger.warn(
+      '[DEPRECATED] useAuthStore is deprecated. Use useAuth() from @/lib/contexts/auth-context instead. ' +
+      'This store will be removed in a future version.'
+    );
+    hasWarnedDeprecation = true;
+  }
+}
 
 interface AuthState {
   // State
@@ -27,7 +52,11 @@ interface AuthState {
   clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set, get) => {
+  // Warn about deprecation on first use
+  warnDeprecation();
+  
+  return {
   // Initial state
   user: null,
   isAuthenticated: false,
@@ -226,4 +255,5 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   clearError: () => {
     set({ error: null });
   },
-}));
+};
+});

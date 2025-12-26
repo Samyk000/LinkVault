@@ -44,6 +44,7 @@ export async function GET(
     }
 
     // Return share information with links
+    // SECURITY: Do NOT expose userId to public share viewers
     return NextResponse.json({
       valid: true,
       data: {
@@ -54,7 +55,7 @@ export async function GET(
           iconName: share.folders.icon_name,
           color: share.folders.color,
           description: share.folders.description,
-          userId: share.folders.user_id,
+          // userId intentionally omitted for security
         },
         links: share.folders_links || [],
         createdAt: share.created_at,

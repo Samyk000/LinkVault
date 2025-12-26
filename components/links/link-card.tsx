@@ -445,7 +445,9 @@ function LinkCardComponent({
               src={link.thumbnail}
               alt={link.title}
               fill
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              // PERFORMANCE: Optimized sizes for actual display dimensions
+              // Mobile: ~160px, Tablet: ~200px, Desktop: ~250px max
+              sizes="(max-width: 640px) 160px, (max-width: 1024px) 200px, 250px"
               className="object-cover transition-transform duration-400 ease-in-out group-hover:scale-[1.03] will-change-transform"
               onError={() => setImageError(true)}
               loading={priority ? "eager" : "lazy"}

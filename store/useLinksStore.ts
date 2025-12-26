@@ -85,7 +85,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
 
     try {
       // CRITICAL: Sanitize input data to prevent XSS
-      const sanitizedData = sanitizeLinkData(linkData);
+      const sanitizedData = sanitizeLinkData(linkData) as typeof linkData;
 
       // GUEST MODE: Use local storage instead of database
       if (isGuestMode()) {
@@ -105,7 +105,8 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       // Generate temporary ID for optimistic update
       const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const tempLink: Link = {
-        ...sanitizedData,
+        ...linkData, // Use original linkData which has all required fields
+        ...sanitizedData, // Override with sanitized values
         id: tempId,
         deletedAt: null,
         createdAt: new Date().toISOString(),
@@ -137,7 +138,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
           // FIX 2: Pass userId to service layer - no getUser() in service either
-          const savePromise = linksDatabaseService.addLink(sanitizedData, userId);
+          const savePromise = linksDatabaseService.addLink(sanitizedData as typeof linkData, userId);
           const timeoutPromise = new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('Add link timeout - please check your connection')), timeoutDuration)
           );

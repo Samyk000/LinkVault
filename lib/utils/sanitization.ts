@@ -2,9 +2,14 @@
  * @file lib/utils/sanitization.ts
  * @description Input sanitization utilities to prevent XSS and other injection attacks
  * @created 2025-11-11
+ * @updated 2025-12-26 - Improved type safety
  */
 
-// Simple sanitization without external dependencies
+import { Link, Folder, AppSettings, Platform } from '@/types';
+
+// Type definitions for sanitization inputs and outputs
+type LinkInput = Partial<Omit<Link, 'id' | 'createdAt' | 'updatedAt'>>;
+type FolderInput = Partial<Omit<Folder, 'id' | 'createdAt' | 'updatedAt'>>;
 
 /**
  * Sanitizes a string to prevent XSS attacks
@@ -16,25 +21,25 @@ export function sanitizeString(input: string): string {
     return '';
   }
 
-  // Simple but effective sanitization without external dependencies
+  // SECURITY: Proper HTML entity encoding to prevent XSS
+  // CRITICAL: Ampersand MUST be escaped first to avoid double-encoding
   return input
-    .replace(/[<>]/g, '') // Remove angle brackets to prevent HTML injection
-    .replace(/&/g, '&') // Escape ampersands
-    .replace(/\"/g, '"') // Escape quotes
-    .replace(/\'/g, '&#x27;') // Escape single quotes
-    .replace(/\//g, '&#x2F;') // Escape forward slashes
+    .replace(/&/g, '&amp;')      // Escape ampersands FIRST
+    .replace(/</g, '&lt;')       // Escape less-than
+    .replace(/>/g, '&gt;')       // Escape greater-than
+    .replace(/"/g, '&quot;')     // Escape double quotes
+    .replace(/'/g, '&#x27;')     // Escape single quotes
+    .replace(/\//g, '&#x2F;')    // Escape forward slashes
     .trim();
 }
 
 /**
  * Sanitizes link data to prevent XSS and injection attacks
- * @param {Partial<Link> | Omit<Link, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>} data - Link data to sanitize
- * @returns {Partial<Link> | Omit<Link, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>} Sanitized link data
+ * @param {LinkInput} data - Link data to sanitize
+ * @returns {LinkInput} Sanitized link data
  */
-export function sanitizeLinkData(
-  data: Partial<any> | Omit<any, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>
-): any {
-  const sanitized: any = {};
+export function sanitizeLinkData(data: LinkInput): LinkInput {
+  const sanitized: LinkInput = {};
 
   if (data.url !== undefined) {
     // URL should be validated, not just sanitized
@@ -58,7 +63,7 @@ export function sanitizeLinkData(
   }
 
   if (data.platform !== undefined) {
-    sanitized.platform = sanitizeString(String(data.platform)).substring(0, 50);
+    sanitized.platform = sanitizePlatform(data.platform);
   }
 
   if (data.folderId !== undefined) {
@@ -75,7 +80,7 @@ export function sanitizeLinkData(
   if (data.tags !== undefined) {
     sanitized.tags = Array.isArray(data.tags)
       ? data.tags
-          .map((tag: any) => sanitizeString(String(tag)).substring(0, 50))
+          .map((tag: unknown) => sanitizeString(String(tag)).substring(0, 50))
           .filter((tag: string) => tag.length > 0)
       : [];
   }
@@ -89,13 +94,11 @@ export function sanitizeLinkData(
 
 /**
  * Sanitizes folder data to prevent XSS and injection attacks
- * @param {Partial<Folder> | Omit<Folder, 'id' | 'createdAt' | 'updatedAt'>} data - Folder data to sanitize
- * @returns {Partial<Folder> | Omit<Folder, 'id' | 'createdAt' | 'updatedAt'>} Sanitized folder data
+ * @param {FolderInput} data - Folder data to sanitize
+ * @returns {FolderInput} Sanitized folder data
  */
-export function sanitizeFolderData(
-  data: Partial<any> | Omit<any, 'id' | 'createdAt' | 'updatedAt'>
-): any {
-  const sanitized: any = {};
+export function sanitizeFolderData(data: FolderInput): FolderInput {
+  const sanitized: FolderInput = {};
 
   if (data.name !== undefined) {
     sanitized.name = sanitizeString(String(data.name)).substring(0, 100);
@@ -107,7 +110,7 @@ export function sanitizeFolderData(
   if (data.description !== undefined) {
     sanitized.description = data.description 
       ? sanitizeString(String(data.description)).substring(0, 500)
-      : null;
+      : undefined;
   }
 
   if (data.color !== undefined) {
@@ -131,8 +134,8 @@ export function sanitizeFolderData(
 
   if (data.platform !== undefined) {
     sanitized.platform = data.platform 
-      ? sanitizeString(String(data.platform)).substring(0, 50)
-      : null;
+      ? sanitizePlatform(data.platform)
+      : undefined;
   }
 
   return sanitized;
@@ -140,10 +143,10 @@ export function sanitizeFolderData(
 
 /**
  * Validates and sanitizes a URL
- * @param {string} url - URL to validate and sanitize
+ * @param {unknown} url - URL to validate and sanitize
  * @returns {string} Sanitized URL or empty string if invalid
  */
-function validateAndSanitizeUrl(url: any): string {
+function validateAndSanitizeUrl(url: unknown): string {
   if (!url || typeof url !== 'string') {
     return '';
   }
@@ -157,26 +160,28 @@ function validateAndSanitizeUrl(url: any): string {
       return '';
     }
 
-    // Block private IP ranges and localhost in production
-    if (process.env.NODE_ENV === 'production') {
-      const hostname = parsedUrl.hostname.toLowerCase();
-      const blockedPatterns = [
-        /^localhost$/i,
-        /^127\./,
-        /^10\./,
-        /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
-        /^192\.168\./,
-        /^169\.254\./,
-        /^::1$/,
-        /^fc00:/,
-        /^fe80:/,
-        /\.local$/i,
-        /\.internal$/i,
-      ];
+    // SECURITY: Always block private IP ranges and localhost (not just production)
+    const hostname = parsedUrl.hostname.toLowerCase();
+    const blockedPatterns = [
+      /^localhost$/i,
+      /^127\./,
+      /^10\./,
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+      /^192\.168\./,
+      /^169\.254\./,
+      /^0\.0\.0\.0$/,
+      /^::1$/,
+      /^::ffff:/i,
+      /^fc00:/i,
+      /^fe80:/i,
+      /^fd[0-9a-f]{2}:/i,
+      /\.local$/i,
+      /\.localhost$/i,
+      /\.internal$/i,
+    ];
 
-      if (blockedPatterns.some(pattern => pattern.test(hostname))) {
-        throw new Error('Private IP addresses and localhost are not allowed');
-      }
+    if (blockedPatterns.some(pattern => pattern.test(hostname))) {
+      return '';
     }
 
     // Return the validated URL
@@ -185,6 +190,24 @@ function validateAndSanitizeUrl(url: any): string {
     // If URL parsing fails, return empty string
     return '';
   }
+}
+
+/**
+ * Validates and sanitizes a platform value
+ * @param {unknown} platform - Platform to validate
+ * @returns {Platform} Valid platform or 'other'
+ */
+function sanitizePlatform(platform: unknown): Platform {
+  const validPlatforms: Platform[] = [
+    'youtube', 'twitter', 'instagram', 'linkedin', 'tiktok',
+    'github', 'medium', 'reddit', 'facebook', 'other'
+  ];
+  
+  if (typeof platform === 'string' && validPlatforms.includes(platform as Platform)) {
+    return platform as Platform;
+  }
+  
+  return 'other';
 }
 
 /**
@@ -237,20 +260,15 @@ export function sanitizeSearchQuery(query: string): string {
 
 /**
  * Sanitizes user settings data
- * @param {any} settings - Settings data to sanitize
- * @returns {any} Sanitized settings
+ * @param {Partial<AppSettings>} settings - Settings data to sanitize
+ * @returns {Partial<AppSettings>} Sanitized settings
  */
-export function sanitizeSettingsData(settings: any): any {
-  const sanitized: any = {};
+export function sanitizeSettingsData(settings: Partial<AppSettings>): Partial<AppSettings> {
+  const sanitized: Partial<AppSettings> = {};
 
   if (settings.theme !== undefined) {
-    const validThemes = ['light', 'dark', 'system'];
+    const validThemes: AppSettings['theme'][] = ['light', 'dark', 'system'];
     sanitized.theme = validThemes.includes(settings.theme) ? settings.theme : 'system';
-  }
-
-  if (settings.viewMode !== undefined) {
-    const validViewModes = ['grid', 'list'];
-    sanitized.viewMode = validViewModes.includes(settings.viewMode) ? settings.viewMode : 'grid';
   }
 
   return sanitized;

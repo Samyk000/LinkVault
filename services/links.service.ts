@@ -39,7 +39,6 @@ export const linksService = {
         folder_id: sanitizedData.folderId,
         is_favorite: sanitizedData.isFavorite,
         tags: sanitizedData.tags,
-        ...(sanitizedData.metadata ? { metadata: sanitizedData.metadata } : {})
       })
       .select()
       .single();
@@ -83,7 +82,6 @@ export const linksService = {
         ...(sanitizedUpdates.folderId !== undefined && { folder_id: sanitizedUpdates.folderId }),
         ...(sanitizedUpdates.isFavorite !== undefined && { is_favorite: sanitizedUpdates.isFavorite }),
         ...(sanitizedUpdates.tags && { tags: sanitizedUpdates.tags }),
-        ...(sanitizedUpdates.metadata && { metadata: sanitizedUpdates.metadata }),
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -269,7 +267,6 @@ export const linksService = {
         ...(sanitizedUpdates.folderId !== undefined && { folder_id: sanitizedUpdates.folderId }),
         ...(sanitizedUpdates.isFavorite !== undefined && { is_favorite: sanitizedUpdates.isFavorite }),
         ...(sanitizedUpdates.tags && { tags: sanitizedUpdates.tags }),
-        ...(sanitizedUpdates.metadata && { metadata: sanitizedUpdates.metadata }),
         updated_at: new Date().toISOString()
       })
       .in('id', ids);

@@ -42,6 +42,8 @@ export const IMAGE_CONSTANTS = {
         'avatars.githubusercontent.com',
         'github.com',
         'favicons.githubusercontent.com',
+        'opengraph.githubassets.com',
+        'repository-images.githubusercontent.com',
         // Medium
         'miro.medium.com',
         'cdn-images-1.medium.com',
@@ -62,8 +64,14 @@ export const IMAGE_CONSTANTS = {
         'logo.clearbit.com',
         'icons.duckduckgo.com',
         'www.favicon.cc',
-        // Other
+        // Vercel
+        'vercel.app',
+        'frontend-blog-ngrok.vercel.app',
+        // Other common OG image sources
         'buffer.com',
+        'luvvoice.com',
+        'filemock.com',
+        'dos.zone',
         'localhost',
     ] as const,
 } as const;
