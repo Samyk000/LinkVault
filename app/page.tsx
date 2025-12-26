@@ -2,18 +2,17 @@
 
 /**
  * @file app/page.tsx
- * @description Root page that shows landing page for unauthenticated users and redirects authenticated users to /app
+ * @description Root page - Landing page for all visitors, auth redirect handled by middleware
  * @created 2025-01-01
- * @updated 2025-12-26 - Performance optimization with dynamic imports
+ * @updated 2025-12-26 - Performance optimization: removed auth blocking
  */
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/contexts/auth-context";
 
 // PERFORMANCE: Dynamic import landing page to reduce initial bundle
-// Dashboard code is completely separate in /app route
 const LandingPage = dynamic(
   () => import("@/components/landing/landing-page").then(mod => ({ default: mod.LandingPage })),
   {
@@ -24,53 +23,60 @@ const LandingPage = dynamic(
 
 /**
  * Lightweight skeleton for landing page loading state
+ * PERFORMANCE: Minimal DOM, no animations, instant render
  */
 function LandingPageSkeleton() {
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-white dark:bg-[#050505]">
+      {/* Nav skeleton */}
+      <div className="h-16 border-b border-gray-100 dark:border-white/10" />
       {/* Hero section skeleton */}
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-        <div className="w-48 h-8 bg-gray-800 rounded animate-pulse mb-4" />
-        <div className="w-96 h-12 bg-gray-800 rounded animate-pulse mb-2" />
-        <div className="w-72 h-6 bg-gray-800 rounded animate-pulse" />
+        <div className="w-48 h-8 bg-gray-100 dark:bg-gray-800 rounded mb-4" />
+        <div className="w-96 h-12 bg-gray-100 dark:bg-gray-800 rounded mb-2" />
+        <div className="w-72 h-6 bg-gray-100 dark:bg-gray-800 rounded" />
       </div>
     </div>
   );
 }
 
 /**
- * Root page component that handles authentication-based routing.
- * Shows landing page for unauthenticated users and redirects authenticated users to /app.
+ * Root page component - Shows landing page immediately
+ * Auth redirect is handled in the background without blocking render
  * @returns {JSX.Element} Root page component
  */
 export default function Home() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, isSessionReady } = useAuth();
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
-  // Redirect authenticated users to /app
+  // PERFORMANCE: Non-blocking auth check
+  // Show landing page immediately, redirect in background if authenticated
   useEffect(() => {
-    if (!loading && user) {
-      router.push('/app');
+    // Only redirect when we're certain user is authenticated
+    // Don't block render while checking
+    if (!loading && isSessionReady && user) {
+      setShouldRedirect(true);
+      // Use replace to avoid back button issues
+      router.replace('/app');
     }
-  }, [user, loading, router]);
+  }, [user, loading, isSessionReady, router]);
 
-  // Show loading state while checking authentication
-  if (loading) {
+  // PERFORMANCE: Always render landing page immediately
+  // Don't show loading spinner - let landing page render while auth checks in background
+  // If user is authenticated, they'll be redirected seamlessly
+  if (shouldRedirect) {
+    // Show minimal loading only when actively redirecting
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#050505]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading...</p>
+          <p className="text-gray-400">Redirecting to dashboard...</p>
         </div>
       </div>
     );
   }
 
-  // Show landing page for unauthenticated users
-  if (!user) {
-    return <LandingPage />;
-  }
-
-  // This should not be reached due to the redirect above, but just in case
-  return null;
+  // Show landing page immediately - no auth blocking
+  return <LandingPage />;
 }

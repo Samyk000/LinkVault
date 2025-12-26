@@ -2,7 +2,7 @@
  * @file components/landing/landing-page.tsx
  * @description System 2.0 landing page with dark/light theme support
  * @created 2025-11-20
- * @updated 2025-12-13
+ * @updated 2025-12-26 - Performance: extracted CSS, deferred animations
  */
 
 'use client';
@@ -26,6 +26,9 @@ import {
     Github,
     File
 } from 'lucide-react';
+
+// PERFORMANCE: Import CSS file instead of inline styles
+import './landing-page.css';
 
 /**
  * Reveal animation component
@@ -306,13 +309,31 @@ export function LandingPage(): React.JSX.Element {
     const router = useRouter();
     const { setTheme, resolvedTheme } = useTheme();
 
-    // Typewriter Loop
+    // PERFORMANCE: Defer animations until after LCP
+    const [animationsEnabled, setAnimationsEnabled] = useState(false);
+
+    // Typewriter Loop - PERFORMANCE: Start with first phrase visible for LCP
     const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
-    const [displayText, setDisplayText] = useState("");
+    const [displayText, setDisplayText] = useState("STORE."); // Start with text visible for LCP
     const [isDeleting, setIsDeleting] = useState(false);
     const [typingSpeed, setTypingSpeed] = useState(150);
 
+    // PERFORMANCE: Enable animations after initial paint
     useEffect(() => {
+        // Use requestIdleCallback if available, otherwise setTimeout
+        const enableAnimations = () => setAnimationsEnabled(true);
+        
+        if ('requestIdleCallback' in window) {
+            (window as any).requestIdleCallback(enableAnimations, { timeout: 1000 });
+        } else {
+            setTimeout(enableAnimations, 100);
+        }
+    }, []);
+
+    useEffect(() => {
+        // Don't start typewriter until animations are enabled
+        if (!animationsEnabled) return;
+        
         const handleType = () => {
             const fullPhrase = phrases[currentPhraseIndex];
             if (isDeleting) {
@@ -332,344 +353,15 @@ export function LandingPage(): React.JSX.Element {
         };
         const timer = setTimeout(handleType, typingSpeed);
         return () => clearTimeout(timer);
-    }, [displayText, isDeleting, currentPhraseIndex, typingSpeed, phrases]);
+    }, [displayText, isDeleting, currentPhraseIndex, typingSpeed, animationsEnabled]);
 
     const toggleTheme = () => {
         setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
     };
 
     return (
-        <div className="min-h-screen bg-white dark:bg-[#050505] text-black dark:text-white font-sans selection:bg-orange-100 selection:text-orange-900 dark:selection:bg-orange-900 dark:selection:text-white overflow-x-hidden transition-colors duration-300">
-            <style jsx global>{`
-                /* --- CSS Variables --- */
-                :root {
-                    --grid-color: rgba(0, 0, 0, 0.03);
-                    --bg-color: #ffffff;
-                }
-                .dark {
-                    --grid-color: rgba(255, 255, 255, 0.05);
-                    --bg-color: #050505;
-                }
-
-                /* --- Dynamic Grid --- */
-                .bg-grid {
-                    background-size: 50px 50px;
-                    background-image:
-                        linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
-                        linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
-                }
-
-                /* --- Button Slide Effects --- */
-                .btn-slide {
-                    position: relative;
-                    overflow: hidden;
-                    transition: all 0.4s ease;
-                    z-index: 1;
-                }
-                .btn-slide::before {
-                    content: '';
-                    position: absolute;
-                    bottom: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 0%;
-                    transition: height 0.4s cubic-bezier(0.76, 0, 0.24, 1);
-                    z-index: -1;
-                }
-                .btn-slide:hover::before {
-                    height: 100%;
-                }
-
-                /* Primary Black Button */
-                .btn-black {
-                    background-color: #000;
-                    color: #fff;
-                    border: 1px solid #000;
-                }
-                .dark .btn-black {
-                    background-color: #fff;
-                    color: #000;
-                    border: 1px solid #fff;
-                }
-                .btn-black::before {
-                    background-color: #FF3E00;
-                }
-                .btn-black:hover {
-                    color: #fff;
-                    border-color: #FF3E00;
-                }
-                .dark .btn-black:hover {
-                    color: #fff;
-                    border-color: #FF3E00;
-                }
-
-                /* Outline Button */
-                .btn-outline {
-                    background-color: transparent;
-                    border: 1px solid #e5e7eb;
-                    color: #000;
-                }
-                .dark .btn-outline {
-                    border-color: #333;
-                    color: #fff;
-                }
-                .btn-outline::before {
-                    background-color: #000;
-                }
-                .dark .btn-outline::before {
-                    background-color: #fff;
-                }
-                .btn-outline:hover {
-                    color: #fff;
-                    border-color: #000;
-                }
-                .dark .btn-outline:hover {
-                    color: #000;
-                    border-color: #fff;
-                }
-
-                /* --- Pricing Buttons --- */
-                .btn-guest-slide {
-                    background-color: transparent;
-                    color: white;
-                    border: 1px solid #374151;
-                }
-                .btn-guest-slide::before {
-                    background-color: #FF3E00;
-                }
-                .btn-guest-slide:hover {
-                    color: white;
-                    border-color: #FF3E00;
-                }
-
-                .btn-sync-slide {
-                    background-color: #000;
-                    color: white;
-                    border: 1px solid #000;
-                }
-                .dark .btn-sync-slide {
-                    background-color: #fff;
-                    color: #000;
-                }
-                .btn-sync-slide::before {
-                    background-color: #ffffff;
-                }
-                .dark .btn-sync-slide::before {
-                    background-color: #000;
-                }
-                .btn-sync-slide:hover {
-                    color: #000;
-                    border-color: #fff;
-                }
-                .dark .btn-sync-slide:hover {
-                    color: #fff;
-                    border-color: #000;
-                }
-
-                /* --- Theme Toggle Animation --- */
-                .theme-icon {
-                    transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-                }
-                .dark .theme-icon {
-                    transform: rotate(180deg);
-                }
-
-                /* --- Typewriter Cursor --- */
-                .cursor-blink {
-                    display: inline-block;
-                    width: 5px;
-                    height: 0.9em;
-                    background-color: #FF3E00;
-                    margin-left: 8px;
-                    animation: blink 1s step-end infinite;
-                    vertical-align: baseline;
-                }
-                @keyframes blink {
-                    50% { opacity: 0; }
-                }
-
-                /* --- HERO ANIMATIONS --- */
-                .hero-chaos {
-                    opacity: 0;
-                }
-                .hero-chaos-1 {
-                    animation: chaos-in 3s ease-in infinite;
-                }
-                .hero-chaos-2 {
-                    animation: chaos-in 3s ease-in infinite;
-                    animation-delay: 1s;
-                }
-                .hero-chaos-3 {
-                    animation: chaos-in 3s ease-in infinite;
-                    animation-delay: 2s;
-                }
-                @keyframes chaos-in {
-                    0% { transform: translate(-50px, -20px) rotate(0deg); opacity: 0; }
-                    20% { opacity: 1; }
-                    90% { transform: translate(180px, 0px) rotate(360deg) scale(0.5); opacity: 1; }
-                    100% { transform: translate(200px, 0px) scale(0); opacity: 0; }
-                }
-
-                .hero-core-ring {
-                    animation: spin 10s linear infinite;
-                    transform-origin: center;
-                }
-                .hero-core-ring-reverse {
-                    animation: spin 15s linear infinite reverse;
-                    transform-origin: center;
-                }
-                @keyframes spin {
-                    100% { transform: rotate(360deg); }
-                }
-
-                .hero-process-block {
-                    animation: block-flicker 2s infinite;
-                }
-                .hero-process-block:nth-child(2n) { animation-delay: 0.3s; }
-                .hero-process-block:nth-child(3n) { animation-delay: 0.7s; }
-
-                @keyframes block-flicker {
-                    0%, 40% { fill: #f3f4f6; opacity: 0.5; }
-                    45% { fill: #FF3E00; opacity: 1; }
-                    50%, 90% { fill: #000; opacity: 1; }
-                    100% { fill: #f3f4f6; opacity: 0.5; }
-                }
-                .dark .hero-process-block {
-                    animation-name: block-flicker-dark;
-                }
-                @keyframes block-flicker-dark {
-                    0%, 40% { fill: #333; opacity: 0.5; }
-                    45% { fill: #FF3E00; opacity: 1; }
-                    50%, 90% { fill: #fff; opacity: 1; }
-                    100% { fill: #333; opacity: 0.5; }
-                }
-
-                .hero-scanner-line {
-                    animation: scan-vertical 3s ease-in-out infinite;
-                }
-                @keyframes scan-vertical {
-                    0% { transform: translateY(-30px); opacity: 0; }
-                    10% { opacity: 1; }
-                    90% { opacity: 1; }
-                    100% { transform: translateY(30px); opacity: 0; }
-                }
-
-                .hero-stream {
-                    stroke-dasharray: 20;
-                    stroke-dashoffset: 20;
-                    animation: stream-out 2s linear infinite;
-                }
-                .hero-stream-delay-1 { animation-delay: 0.5s; }
-                .hero-stream-delay-2 { animation-delay: 1s; }
-                @keyframes stream-out {
-                    to { stroke-dashoffset: -100; }
-                }
-
-                /* --- FEATURE ANIMATIONS --- */
-                .share-path {
-                    stroke-dasharray: 100;
-                    stroke-dashoffset: 100;
-                    animation: share-draw 3s ease-in-out infinite;
-                }
-                @keyframes share-draw {
-                    0% { stroke-dashoffset: 100; }
-                    40%, 100% { stroke-dashoffset: 0; }
-                }
-
-                .share-ripple {
-                    animation: node-ripple 3s infinite;
-                    transform-origin: center;
-                }
-                .share-ripple-delay-1 { animation-delay: 0.3s; }
-                .share-ripple-delay-2 { animation-delay: 0.6s; }
-                @keyframes node-ripple {
-                    0%, 60% { r: 10; opacity: 0; stroke-width: 0; }
-                    70% { opacity: 1; stroke-width: 2; }
-                    100% { r: 25; opacity: 0; stroke-width: 0; }
-                }
-
-                .search-shimmer {
-                    animation: shimmer-slide 3s infinite;
-                }
-                @keyframes shimmer-slide {
-                    0%, 50% { transform: translateX(-150%); }
-                    80%, 100% { transform: translateX(150%); }
-                }
-
-                .tree-path {
-                    stroke-dasharray: 100;
-                    stroke-dashoffset: 100;
-                    animation: grow-tree 3s ease-out infinite;
-                }
-                .tree-path-delay-1 { animation-delay: 0.5s; }
-                .tree-path-delay-2 { animation-delay: 1s; }
-                @keyframes grow-tree {
-                    0% { stroke-dashoffset: 100; }
-                    20%, 90% { stroke-dashoffset: 0; }
-                    100% { stroke-dashoffset: 0; }
-                }
-
-                .file-icon {
-                    opacity: 0;
-                    animation: appear 3s ease-out infinite;
-                }
-                .file-icon-delay-1 { animation-delay: 1.2s; }
-                .file-icon-delay-2 { animation-delay: 1.4s; }
-                @keyframes appear {
-                    0%, 20% { opacity: 0; transform: translateY(5px); }
-                    30%, 90% { opacity: 1; transform: translateY(0); }
-                    100% { opacity: 0; }
-                }
-
-                .anim-pop-1 {
-                    animation: pop-in 3s infinite;
-                    opacity: 0;
-                }
-                .anim-pop-2 {
-                    animation: pop-in 3s infinite 0.2s;
-                    opacity: 0;
-                }
-                .anim-pop-3 {
-                    animation: pop-in 3s infinite 0.4s;
-                    opacity: 0;
-                }
-                @keyframes pop-in {
-                    0% { opacity: 0; transform: translateY(10px); }
-                    20% { opacity: 1; transform: translateY(0); }
-                    80% { opacity: 1; transform: translateY(0); }
-                    100% { opacity: 0; transform: translateY(0); }
-                }
-
-                .anim-typing-bar {
-                    width: 0;
-                    animation: type-width 3s steps(15) infinite;
-                    border-right: 2px solid #FF3E00;
-                    overflow: hidden;
-                    white-space: nowrap;
-                }
-                @keyframes type-width {
-                    0% { width: 0; }
-                    40%, 90% { width: 90px; }
-                    100% { width: 0; }
-                }
-
-                .anim-highlight-row {
-                    animation: highlight-flash 3s infinite;
-                }
-                @keyframes highlight-flash {
-                    0%, 40% { background-color: transparent; }
-                    50%, 90% { background-color: #FFF7ED; }
-                    100% { background-color: transparent; }
-                }
-                .dark .anim-highlight-row {
-                    animation: highlight-flash-dark 3s infinite;
-                }
-                @keyframes highlight-flash-dark {
-                    0%, 40% { background-color: transparent; }
-                    50%, 90% { background-color: #2a1510; }
-                    100% { background-color: transparent; }
-                }
-            `}</style>
+        <div className={`min-h-screen bg-white dark:bg-[#050505] text-black dark:text-white font-sans selection:bg-orange-100 selection:text-orange-900 dark:selection:bg-orange-900 dark:selection:text-white overflow-x-hidden transition-colors duration-300 ${animationsEnabled ? 'hero-animations-enabled' : ''}`}>
+            {/* PERFORMANCE: CSS moved to landing-page.css */}
 
             {/* Grid Background */}
             <div className="fixed inset-0 bg-grid pointer-events-none z-0"></div>

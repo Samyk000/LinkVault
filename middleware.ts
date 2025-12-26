@@ -199,6 +199,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
     const isAuthenticated = !!session?.user;
 
+    // PERFORMANCE: Redirect authenticated users from landing page to /app
+    // This happens at the edge, before the page even loads
+    if (isAuthenticated && pathname === '/') {
+      return NextResponse.redirect(new URL('/app', request.url));
+    }
+
     // Handle authenticated users trying to access auth pages
     if (isAuthenticated && isAuthPage(pathname)) {
       const redirectTo = request.nextUrl.searchParams.get('redirectTo') || '/app';
